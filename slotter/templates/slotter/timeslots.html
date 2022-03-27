@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Select timeslots</title>
+</head>
+<body>
+	<h2>Select {{n_written_out}} timeslots:</h2>
+	<table border='1'>
+		<tr>
+			<td></td>
+			{% for day in weekdays %}
+			<td>{{day}}</td>
+			{% endfor %}
+		</tr>
+		{% for k, v in table.items %}
+		<tr>
+			<td align="right">{{k|lower}}</td>
+			{% for i in v %}
+				{% if i == None %}
+				<td></td>
+				{% elif i == "continuation" %}
+
+				{% else %}
+				<td rowspan="{{i.duration}}">{{i}}</td>
+				{% endif %}
+			{% endfor %}
+		</tr>
+		{% endfor %}
+	</table>
+	<br>
+	<table cellpadding="15">
+		<tr>
+			<td valign="top">
+				<form action="/slotter/assign_students">
+					<fieldset>
+						<legend><h3>Timeslots</h3></legend>
+						Select timeslots and the number of students to be assigned to each.<br>
+						<br>
+						{% for o in option_list %}
+						<label for="{{o}}">{{o}}:</label>
+						<select id="{{o}}" name ="{{o}}" required>
+							{% for k in lookup %}
+							<option>{{k}}</option>
+							{% endfor %}
+						</select>
+						<label for="students">#:</label>
+						<input type="number" min="2" max="{{max_students}}" id="students" required><br>
+						{% endfor %}
+					<br>
+					<button type="submit">Submit</button>
+					</fieldset>
+				</form>
+			</td>
+			<td>
+				<h3>Basic Breakdown</h3>
+				<strong>Min number of students per seminar:</strong> {{min_students}}<br>
+				<strong>Number of seminars:</strong> {{n_seminars}}<br>
+				<strong>Possibilities to choose from:</strong> {{n_possibilities}}<br>
+				<br>
+				<strong>Options:</strong><br>
+				<br>
+				{% for k, v in lookup.items %}
+				<strong>{{k}}:</strong> {% for i in v %}{% if i == v|last %}{{i}}{% else %}{{i}},{% endif %} {% endfor %}<br>
+				{% endfor %}
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
