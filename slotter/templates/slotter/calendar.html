@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Calendar</title>
+</head>
+<body>
+	<form action="" method="post">
+	{% csrf_token %}
+	<legend><h2>Schedule Exploration</h2></legend>
+	{% for error in form0.non_field_errors %}
+	{{error}}
+	{% endfor %}
+	<br>
+	{% for field in form0 %}
+	{{ field.label_tag }} {{ field }}
+	{% endfor %}
+	<input type="submit" value="Change Quarter">
+	</form>
+	{% if chosen_year %}
+	<br>
+	<form action="" method="post">
+	{% csrf_token %}
+	{% for field in form %}
+	<strong>{{ field.label_tag }}</strong> {{ field }}<br>
+	{% endfor %}
+	</form>
+	<button id="quarter_button" type="button" class="selected">Quarter</button> <button id="weekly_button" type="button">Weekly</button>
+	<br>
+	<br>
+	<div id="jump_week_form_box">
+		<form action="" method="post">
+		{% csrf_token %}
+		{% for field in form2 %}
+		{{ field.label_tag }} {{ field }}
+		{% endfor %}
+		</form>
+	</div>
+	<button id="prev_week_button" type="button">Prev</button>
+	<button id="next_week_button" type="button">Next</button>
+	{# quarter-long calendar #}
+	<h2>{{chosen_quarter_name}} {{chosen_year}} <span id="week_heading"></span></h2>
+	<table border="1" id="quarter_long_cal">
+		<tr>
+			<td></td>
+			{# header row #}
+			{% for day in mon_to_fri %}
+			<td width="18%"><center><strong>{{day}}</strong></center></td>
+			{% endfor %}
+		</tr>
+		{% for row, list in quarter_calendar.items %}
+		<tr>
+			{# week column #}
+			{% if row == 9 and chosen_quarter == 1 %}
+			<td rowspan="2"><center><strong>Thanksgiving</strong></center></td>
+			{% elif row == 10 and chosen_quarter == 1 %}
+			<td rowspan="2"><center><strong>Week 9</strong></center></td>
+			{% else %}
+			<td rowspan="2"><center><strong>Week {{row}}</strong></center></td>
+			{% endif %}
+			{% for day in list %}
+			{# date band #}
+			{% if day|date:"j" == "1" %}
+			{# prints month abbreviation if day is the 1st of the month#}
+			<td>{{ day|date:"M j" }}</td>
+			{% elif day == list|first and row == 1 %}
+			{# prints month abbreviation if this is the first square in the calendar #}
+			<td>{{ day|date:"M j" }}</td>
+			{% else %}
+			{# otherwise just prints date #}
+			<td>{{ day|date:"j" }}</td>
+			{% endif %}
+			{% endfor %}
+				</tr>
+		<tr>
+			{% for day in list %}
+			{# generates calendar squares #}
+			{% if day in by_day %}
+				{# for calendar squares with something scheduled #}
+				<td height="100">
+				{% for date, times in by_day.items %}
+					{% if date == day %}
+					{% for time in times %}
+					{% for tup in time %}
+					{% if tup == time|first and tup|length > 1 %}
+						{# marks a conflict between sections #}
+							Conflict:
+							{% for section in tup %}
+							{% if section == tup|last %}
+							{{section}} -
+							{% else %}
+							{{section}},
+							{% endif %}
+							{% endfor %}
+						{% elif tup == time|first %}
+						{# normal scheduled time #}
+							{{tup}},
+						{% elif tup == time|last %}
+						{# prints actual time #}
+							{{tup|date:"P"}}<br>
+					{% endif %}
+					{% endfor %}
+					{% endfor %}
+					{% endif %}
+				{% endfor %}
+				</td>
+			{% elif day == thanksgiving %}
+			<td height="100">Thanksgiving</td>
+			{% else %}
+			{# blank calendar squares #}
+			<td height="100">
+				<div id="{{day|date:"Y-n-j"}}">
+				</div>
+			</td>
+			{% endif %}
+			{% endfor %}
+		</tr>
+		{% endfor %}
+	</table>
+
+	<div id="main">
+	</div>
+	<script>
+		const sectionLookup = JSON.parse("{{json_combo_count|escapejs}}")
+		const comboLookup = JSON.parse("{{json_combo_lookup|escapejs}}")
+		const quarterDates = JSON.parse("{{json_date_dict|escapejs}}")
+		const weekByWeek = JSON.parse("{{json_week_by_week|escapejs}}")
+		const mainDiv = document.getElementById("main");
+		const monthAbbrev = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"]
+		const quarterButton = document.getElementById("quarter_button")
+		const weekButton = document.getElementById("weekly_button")
+		const quarterCalendar = document.getElementById("quarter_long_cal")
+		const weekHeading = document.getElementById("week_heading")
+		const jumpWeekForm = document.getElementById("jump_week_form_box")
+		const jumpWeekDropdown = document.getElementById("id_jump_to_week")
+		const prevWeekButton = document.getElementById("prev_week_button")
+		const nextWeekButton = document.getElementById("next_week_button")
+		let activeCal = 'quarter'
+		let activeWeekWeeklyCal = null
+
+		jumpWeekForm.style.display = "none"
+		prevWeekButton.style.display = "none"
+		nextWeekButton.style.display = "none"
+
+		addCheckboxListeners()
+		quarterButtonToggle()
+		weekButtonToggle()
+		weekDropdownToggle()
+		prevButtonControl()
+		nextButtonControl()
+
+		function addCheckboxListeners() {
+			for (let section of sectionLookup) {
+				// loops through the checkboxes for each section
+				for (let n = 0; n < section['count']; n++) {
+					let checkbox = document.getElementById("id_timeslot_combinations_" + section['pk'] + "_" + n);
+					checkbox.addEventListener("change", function() {
+						// gets the value for each checkbox (corresponds with the Django Combination object's primary key)
+						let comboPK = Number(checkbox.value);
+						// checks for already-checked checkboxes so they can be unchecked
+						if (checkbox.checked == true) uncheck(section, n);
+						// initiates process of updating the calendar squares
+						getComboTimeslots(comboPK, checkbox.checked);
+					})
+				}
+			}
+		}
+
+		function uncheck(section, current) {
+			// loops through all the checkboxes for the relevant section
+			for (let n = 0; n < section['count']; n++) {
+				// excludes the newly checked checkbox
+				if (n !== current) {
+					let checkbox = document.getElementById("id_timeslot_combinations_" + section['pk'] + "_" + n);
+					// identifies any checked checkboxes
+					if (checkbox.checked == true) {
+						// unchecks them and initiates updating of the relevant calendar squares
+						checkbox.checked = false;
+						let comboPK = checkbox.value;
+						getComboTimeslots(comboPK, checkbox.checked);
+					}
+				}
+			}
+		}
+
+		function quarterButtonToggle() {
+			quarterButton.addEventListener("click", function() {
+				quarterCalendar.style.display = "block"
+				quarterButton.class = "selected"
+				weekButton.class = "unselected"
+				jumpWeekForm.style.display = "none";
+				weekHeading.style.display = "none";
+				activeCal = 'quarter'
+				let weeklyCalendar = document.getElementById("weekly_calendar");
+				if (weeklyCalendar !== null) {
+					weeklyCalendar.style.display = "none";
+					prevWeekButton.style.display = "none"
+					nextWeekButton.style.display = "none"
+				}
+			})
+		}
+
+		function weekButtonToggle() {
+			weekButton.addEventListener("click", function() {
+				weekButton.class = "selected";
+				quarterButton.class = "selected";
+				let earliestWeek = findEarliestWeekOfChecked()
+				weekHeading.style.display = "inline-block";
+				weekHeading.innerHTML = '';
+				weekHeading.innerHTML = "- Week " + earliestWeek
+				jumpWeekForm.style.display = "block";
+				jumpWeekDropdown.value = earliestWeek;
+				let weeklyCalendar = document.getElementById("weekly_calendar");
+				if (weeklyCalendar == null) {
+					buildWeekTable(earliestWeek);
+				} else if (activeWeekWeeklyCal == earliestWeek) {
+					weeklyCalendar.style.display = "table";
+				} else {
+					weeklyCalendar.remove();
+					buildWeekTable(earliestWeek);
+				}
+				quarterCalendar.style.display = "none";
+				activeCal = 'weekly'
+				for (let section of sectionLookup) {
+				// loops through the checkboxes for each section
+					for (let n = 0; n < section['count']; n++) {
+						let checkbox = document.getElementById("id_timeslot_combinations_" + section['pk'] + "_" + n);
+						// gets the value for each checkbox (corresponds with the Django Combination object's primary key)
+						if (checkbox.checked == true) {
+							let comboPK = Number(checkbox.value);
+							bypassGetComboTimeslots(comboPK, earliestWeek);
+						}
+					}
+				}
+				displayPrevNextButtons()
+			})
+		}
+
+		function weekDropdownToggle() {
+			jumpWeekDropdown.addEventListener("change", function() {
+				let newWeek = jumpWeekDropdown.value
+				switchWeek(newWeek);
+			})
+		}
+
+		function displayPrevNextButtons() {
+			let weeks = Object.keys(weekByWeek)
+			let nWeeks = weeks.length
+			if (Number(activeWeekWeeklyCal) > 1 && activeWeekWeeklyCal < nWeeks) {
+				prevWeekButton.style.display = "inline-block";
+				nextWeekButton.style.display = "inline-block";
+			} else if (Number(activeWeekWeeklyCal) == 1) {
+				prevWeekButton.style.display = "none";
+				nextWeekButton.style.display = "inline-block";
+			} else if (Number(activeWeekWeeklyCal) == nWeeks) {
+				prevWeekButton.style.display = "inline-block";
+				nextWeekButton.style.display = "none";
+			}
+		}
+
+		function prevButtonControl() {
+			prevWeekButton.addEventListener("click", function() {
+				if (activeWeekWeeklyCal == 10) {
+					newWeek = Number(activeWeekWeeklyCal) - 2
+					jumpWeekDropdown.value = Number(activeWeekWeeklyCal) - 2
+				} else {
+					newWeek = Number(activeWeekWeeklyCal) - 1
+					jumpWeekDropdown.value = Number(activeWeekWeeklyCal) - 1
+				}
+				switchWeek(newWeek)
+			})
+		}
+
+		function nextButtonControl() {
+			nextWeekButton.addEventListener("click", function() {
+				let weeks = Object.keys(weekByWeek)
+				if (activeWeekWeeklyCal == 8 && weeks.length == 10) {
+					newWeek = Number(activeWeekWeeklyCal) + 2
+					jumpWeekDropdown.value = Number(activeWeekWeeklyCal) + 2
+				} else {
+					newWeek = Number(activeWeekWeeklyCal) + 1
+					jumpWeekDropdown.value = Number(activeWeekWeeklyCal) + 1
+				}
+				switchWeek(newWeek)
+			})
+		}
+
+		function switchWeek(newWeek) {
+			let weeklyCalendar = document.getElementById("weekly_calendar");
+			weekHeading.innerHTML = '';
+			if (jumpWeekDropdown.value == 10) {
+				weekHeading.innerHTML = "- Week " + 9;
+			} else {
+				weekHeading.innerHTML = "- Week " + newWeek;
+			}
+			if (activeWeekWeeklyCal !== newWeek) {
+				weeklyCalendar.remove()
+				buildWeekTable(newWeek)
+				displayPrevNextButtons()
+				for (let section of sectionLookup) {
+				// loops through the checkboxes for each section
+					for (let n = 0; n < section['count']; n++) {
+						let checkbox = document.getElementById("id_timeslot_combinations_" + section['pk'] + "_" + n);
+						// gets the value for each checkbox (corresponds with the Django Combination object's primary key)
+						if (checkbox.checked == true) {
+							let comboPK = Number(checkbox.value);
+							bypassGetComboTimeslots(comboPK, newWeek);
+						}
+					}
+				}
+			}
+		}
+
+		function findEarliestWeekOfChecked() {
+			let checkedCombos = []
+			for (let section of sectionLookup) {
+				for (let n = 0; n < section['count']; n++) {
+					let checkbox = document.getElementById("id_timeslot_combinations_" + section['pk'] + "_" + n);
+					if (checkbox.checked == true) {
+						let comboPK = Number(checkbox.value)
+						checkedCombos.push(comboPK)
+					}
+				}
+			}
+			if (checkedCombos.length > 0) {
+				let weeks = []
+				for (let entry of comboLookup) {
+					if (checkedCombos.includes(entry.combo)) {
+						weeks.push(entry.week)
+					}
+				}
+				weeks.sort(compareInts)
+				return weeks[0]
+			} else {
+				return findEarliestWeek()
+			}
+		}
+
+		function findEarliestWeek() {
+			let weeks = []
+			for (let entry of comboLookup) {
+				if (!weeks.includes(entry.week)) weeks.push(entry.week)
+			}
+			weeks.sort(compareInts)
+			return weeks[0]
+		}
+
+		function bypassGetComboTimeslots(comboPK, earliestWeek) {
+			let datesToUpdate = []
+			let cellsToClear = []
+			for (let timeslot of comboLookup) {
+				// identifies times in the checked/unchecked combo in comboLookup
+				if (timeslot.combo == comboPK) {
+					let date = timeslot.date;
+					// adds or removes times from date if checked/unchecked
+					// adds relevant date to the list of dates that need updating
+					if (!datesToUpdate.includes(date)) datesToUpdate.push(date);
+				}
+			}
+			// does the actual updating
+			let weeklyCalendar = document.getElementById("weekly_calendar");
+			if (weeklyCalendar !== null) updateWeekCal(earliestWeek, datesToUpdate, cellsToClear);
+		}
+
+		function compareTimes(timeslotID1, timeslotID2) {
+			// used to order the timeslot ids added to given dates of quarterDates so that the spans that get created appear in chronological order
+			let time1 = Number(timeslotTimeData(timeslotID1));
+			let time2 = Number(timeslotTimeData(timeslotID2));
+			return time1 - time2
+		}
+
+		function getComboTimeslots(comboPK, checkboxState) {
+			// array of dates to be fed to updateCalendarSquare()
+			let datesToUpdate = []
+			let cellsToClear = []
+			for (let timeslot of comboLookup) {
+				// identifies times in the checked/unchecked combo in comboLookup
+				if (timeslot.combo == comboPK) {
+					let date = timeslot.date;
+					// adds or removes times from date if checked/unchecked
+					if (checkboxState == true) {
+						quarterDates[date].push(timeslot.id);
+						quarterDates[date].sort(compareTimes)
+					} else if (checkboxState == false) {
+						for (let id of quarterDates[date]) {
+							if (id == timeslot.id) {
+								cellsToClear.push([timeslot.time, timeslot.date, timeslot.duration])
+								let n = quarterDates[date].indexOf(id);
+								quarterDates[date].splice(n, 1);
+							}
+						}
+					}
+					// adds relevant date to the list of dates that need updating
+					if (!datesToUpdate.includes(date)) datesToUpdate.push(date);
+				}
+			}
+			// does the actual updating
+			updateCalendarSquare(datesToUpdate);
+			let weeklyCalendar = document.getElementById("weekly_calendar");
+			if (activeCal == 'weekly') updateWeekCal(activeWeekWeeklyCal, datesToUpdate, cellsToClear);
+		}
+
+		function updateCalendarSquare(dates) {
+			for (let date of dates) {
+				// gets relevant calendar square for date that needs updating
+				let square = document.getElementById(date);
+				// erases square so it can be rewritten
+				square.innerHTML = '';
+				// looks for conflicts between times (selected from different sections)
+				let conflicts = {}
+				// compares each time to the other times in the array for the given date
+				for (let timeslot of quarterDates[date]) {
+					findConflicts(timeslot, quarterDates[date], conflicts)
+					let conflictKeys = Object.keys(conflicts)
+					let time = timeslotTimeData(timeslot)
+					let conflictSpan = document.getElementById(date + '-' + time + "-conflict")
+					if (conflictKeys.includes(time) && conflictSpan == null) {
+						let newSpan = document.createElement('span');
+						newSpan.id = date + '-' + time + "-conflict"
+						newSpan.class = "calendar_conflict";
+						let sectionList = []
+						for (let timeslot of conflicts[time]) {
+							for (let entry of comboLookup) {
+								if (timeslot == entry.id) {
+									let section = entry.section
+									sectionList.push(convertToSectionName(section))
+								}
+							}
+						}
+						newSpan.innerHTML +=  convertMinutes(time) + " - conflict between "
+						for (let section of sectionList) {
+							if (sectionList.indexOf(section) == sectionList.length - 1) {
+								newSpan.innerHTML += section
+							} else {
+								newSpan.innerHTML += section + ", "
+							}
+						}
+						square.appendChild(newSpan)
+					} else if (!conflictKeys.includes(time)) {
+						for (let entry of comboLookup) {
+							if (timeslot == entry.id) {
+								let newSpan = document.createElement('span');
+								newSpan.id = entry.id;
+								newSpan.class = "calendar_timeslot";
+								let timeslotText =  convertMinutes(entry.time) + " - " + convertToSectionName(entry.section);
+								newSpan.innerHTML = timeslotText;
+								square.appendChild(newSpan);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		function convertMinutes(minutes) {
+			let meridiem = ' am'
+			let hour = Math.floor(minutes / 60)
+			if (hour > 12) {
+				meridiem = ' pm'
+				hour = hour - 12
+			} else if (hour == 12) {
+				meridiem = ' pm'
+			}
+			let min = minutes % 60
+			if (min == 0) min = '00';
+			return hour.toString() + ':' + min.toString() + meridiem
+		}
+
+		function convertToSectionName(sectionPK) {
+			for (let section of sectionLookup) {
+				if (section['pk'] == sectionPK) return section['name']
+			}
+		}
+
+		function timeslotConflict(ts1, ts2) {
+			let ts1Data = timeslotTimeData(ts1);
+			let ts2Data = timeslotTimeData(ts2);
+			if (ts1Data == ts2Data) {
+				return true
+			} else {
+				return false
+			}
+		}
+
+		function findConflicts(timeslot, timeArray, conflicts) {
+			for (let comparee of timeArray) {
+				if (timeslot !== comparee) {
+					let verdict = timeslotConflict(timeslot, comparee);
+					if (verdict == true) {
+						// records conflict in conflicts obj
+						let time = timeslotTimeData(timeslot)
+						let conflictKeys = Object.keys(conflicts)
+						if (!conflictKeys.includes(time)) {
+							conflicts[time] = []
+							conflicts[time].push(timeslot)
+							conflicts[time].push(comparee)
+						} else {
+							if (!conflicts[time].includes(timeslot)) conflicts[time].push(timeslot)
+							if (!conflicts[time].includes(comparee)) conflicts[time].push(comparee)
+						}
+					}
+				}
+			}
+		}
+
+		function timeslotTimeData(timeslot) {
+			let dash1 = timeslot.indexOf('-') + 1;
+			let slice1 = timeslot.slice(dash1);
+			let dash2 = slice1.indexOf('-') + 1;
+			let slice2 = slice1.slice(dash2)
+			let dash3 = slice2.indexOf('-') + 1;
+			return slice2.slice(dash3)
+		}
+
+		function findTimeRange() {
+			let times = []
+			let timeRange = []
+			for (let entry of comboLookup) {
+				if (!times.includes(entry.time)) times.push(entry.time);
+			}
+			times.sort(compareInts)
+			timeRange.push(times[0])
+			let end = times.length - 1
+			timeRange.push(times[end])
+			return timeRange
+		}
+
+		function compareInts(a, b) {
+			return a-b
+		}
+
+		function findLongestDuration() {
+			let durations = []
+			for (let entry of comboLookup) {
+				if (!durations.includes(entry.duration)) durations.push(entry.duration);
+			}
+			durations.sort(compareInts);
+			return durations[durations.length - 1]
+		}
+
+		function buildWeekTable(week) {
+			let table = document.createElement('table');
+			table.border = 1
+			table.id = "weekly_calendar"
+			// builds weekday header
+			let thead = document.createElement('thead');
+			let weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+			let daysForWeek = weekByWeek[week];
+			for (let n = -1; n < 5; n++) {
+				let th = document.createElement('th');
+				if (n > -1) {
+					let date = daysForWeek[n]
+					let dateArray = date.split("-")
+					th.innerHTML += weekdays[n] + " " + monthAbbrev[dateArray[1] - 1] + " " + dateArray[2];
+				}
+				thead.appendChild(th);
+			}
+			table.appendChild(thead)
+			let timeStart = findTimeRange()[0]
+			let increment = 30
+			let timeEnd = findTimeRange()[1] + (increment * findLongestDuration()) - increment
+			for (let n = timeStart; n <= timeEnd; n += increment) {
+				let row = table.insertRow();
+				let th = document.createElement('th');
+				th.innerHTML += convertMinutes(n);
+				row.appendChild(th);
+				for (let i = 0; i <= 4; i++) {
+					let cell = row.insertCell()
+					cell.id = n + "-" + daysForWeek[i];
+				}
+			}
+			mainDiv.appendChild(table)
+			activeWeekWeeklyCal = week;
+		}
+
+		function updateWeekCal(week, datesToUpdate, cellsToClear) {
+			let increment = 30
+			// clears table cells if a combo was unchecked
+			if (cellsToClear.length > 0) {
+				for (let item of cellsToClear) {
+					let cellID = item[0] + "-" + item[1]
+					// cell content is cleared and rowspan gets returned to 1
+					let cell = document.getElementById(cellID);
+					if (cell !== null) {
+						cell.innerHTML = '';
+						cell.rowSpan = 1;
+						// returns visibility to any cells further down that were hidden when a timeslot was selected
+						let endTime = item[0] + (increment * item[2]);
+						for (let n = item[0] + increment; n < endTime; n += increment) {
+							let extraCell = document.getElementById(n + "-" + item[1])
+							extraCell.style.display = "table-cell"
+						}
+					}
+				}
+			}
+			// fills in cells based on the currently checked combos
+			for (let day of weekByWeek[week]) {
+				if (datesToUpdate.includes(day)) {
+					// first checks for conflicts
+					let conflicts = {}
+					for (let timeslot of quarterDates[day]) {
+						findConflicts(timeslot, quarterDates[day], conflicts)
+					}
+					let conflictTimes = Object.keys(conflicts);
+					// writes conflict message for the relevant timeslot
+					for (let timeslot of quarterDates[day]) {
+						let time = timeslotTimeData(timeslot)
+						let conflictSpan = document.getElementById("weekcal-" + day + "-" + time + "-conflict");
+						// first checks to see if the message has already been written (because of another timeslot involved in the conflict)
+						if (conflictTimes.includes(time) && conflictSpan == null) {
+							let cell = document.getElementById(time + "-" + day)
+							for (let entry of comboLookup) {
+								if (entry.id == timeslot) {
+									cell.rowSpan = entry.duration;
+									let endTime = entry.time + (entry.duration * increment);
+									for (let n = entry.time + increment; n < endTime; n += increment) {
+										let extraCell = document.getElementById(n + "-" + entry.date);
+										extraCell.style.display = "none";
+									}
+								}
+							}
+							cell.innerHTML = '';
+							let newSpan = document.createElement('span');
+							newSpan.id = "weekcal-" + day + "-" + time + "-conflict";
+							// gets the names of the sections involved in the conflict
+							let sections = [];
+							for (let t of conflicts[time]) {
+								for (let entry of comboLookup) {
+									if (t == entry.id) {
+										sections.push(convertToSectionName(entry.section))
+									}
+								}
+							}
+							// actually writes and inserts the conflict message
+							newSpan.innerHTML += "Conflict between ";
+							for (let section of sections) {
+								if (sections.indexOf(section) < sections.length - 1) {
+									newSpan.innerHTML += section + ", "
+								} else {
+									newSpan.innerHTML += section
+								}
+							}
+							cell.appendChild(newSpan);
+						// if there is no conflict, adds timeslots from checked combos
+						} else if (!conflictTimes.includes(time)) {
+							for (let entry of comboLookup) {
+								if (entry.id == timeslot) {
+									// finds the right cell and adds a rowspan based on the duration of the timeslot
+									let cell = document.getElementById(entry.time + "-" + entry.date)
+									cell.rowSpan = entry.duration;
+									cell.innerHTML = '';
+									cell.innerHTML += convertToSectionName(entry.section);
+									let endTime = entry.time + (entry.duration * increment);
+									// hides other table cells to make room for the rowspanned cell
+									for (let n = entry.time + increment; n < endTime; n += increment) {
+										let extraCell = document.getElementById(n + "-" + entry.date)
+										extraCell.style.display = "none";
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	</script>
+	{% endif %}
+</body>
+</html>

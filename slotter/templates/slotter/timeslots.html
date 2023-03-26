@@ -2,69 +2,344 @@
 <html>
 <head>
 	<meta charset="utf-8">
+	{% load static %}
+	<link rel="stylesheet" type="text/css" href="{% static 'slotter/style.css' %}">
+	<link href="https://fonts.googleapis.com/css2?family=Cabin&family=Inconsolata:wdth,wght@95,300;100,400;100,800" rel="stylesheet">
 	<title>Select timeslots</title>
 </head>
 <body>
-	<h2>Select {{n_written_out}} timeslots:</h2>
-	<table border='1'>
-		<tr>
+	<div id="header">
+	<svg id="logo" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 284.82 83.04">
+  		<defs>
+	    <style>
+	      .cls-1 {
+	        fill: #fc0;
+	      }
+	    </style>
+	  	</defs>
+	  <path d="M90.21,14.94c15.03,0,25.44,10.9,25.44,24.26s-10.37,24.21-25.53,24.21-25.27-10.85-25.27-24.21,10.37-24.26,25.36-24.26Zm.09,36.83c6.64,0,11.82-4.97,11.82-12.61s-5.23-12.52-11.87-12.52-11.82,5.01-11.82,12.52,5.32,12.61,11.87,12.61Z"/>
+	  <path d="M3.78,47.64c6.33,3.65,10.81,4.66,14.68,4.66,5.1,0,7.82-1.45,7.82-3.87-.04-2.94-3.52-3.3-11.34-5.01-5.36-1.1-14.06-3.16-14.06-13.58,0-9.32,6.64-14.94,19.6-14.94,7.12,0,13.23,1.27,19.2,4.13l-3.52,10.59c-4.75-1.93-10.15-3.69-15.29-3.69-4.53,0-6.2,1.85-6.15,3.78,0,2.24,2.46,3.12,8.61,3.96,9.62,1.71,17.89,3.78,17.89,13.84s-9.14,15.95-21.31,15.95c-7.65,0-13.01-.88-19.91-4.57l3.78-11.25Z"/>
+	  <path d="M130.97,3.78l9.76-.09v12.66h13.23v11.65h-13.23v16c0,5.67,2.81,7.12,6.46,7.12h7.6l-.09,11.12h-8.83c-10.24,0-18.68-2.77-18.68-18.11V27.99h-7.25v-10.37l6.9-2.64,4.13-11.21Z"/>
+	  <path d="M169.73,3.78l9.76-.09v12.66h13.23v11.65h-13.23v16c0,5.67,2.81,7.12,6.46,7.12h7.6l-.09,11.12h-8.83c-10.24,0-18.68-2.77-18.68-18.11V27.99h-7.25v-10.37l6.9-2.64,4.13-11.21Z"/>
+	  <path d="M213.93,44.82c1.98,4.39,6.24,7.08,11.03,7.08,5.62,0,7.87-1.45,10.46-3.47l7.38,8.09c-3.21,3.03-9.54,6.94-17.97,6.94-14.77,0-25.14-11.07-25.14-24.3s10.33-24.3,25.18-24.3c12.96,0,21.27,6.55,21.27,16,0,7.51-3.87,13.97-16.48,13.97h-15.73Zm-.18-10.99h13.71c3.56,0,5.76-1.32,5.76-3.43,0-1.98-2.55-4.35-8-4.35-5.01,0-9.49,3.08-11.47,7.78Z"/>
+	  <path d="M284.82,28.17l-5.71,.04c-7.47,0-11.91,4.22-11.91,12.52v21.18h-13.54V16.35h10.9l1.05,4.31c2.9-2.42,7.12-4.31,12.74-4.31h6.46v11.82Z"/>
+	  <path d="M55.83,39.16c0-6.59,2.54-12.6,6.93-16.98V0h-13.58V45.53c0,12.61,3.21,16.44,16.96,16.44h2.86v-1.36c-8.09-4.05-13.17-12.14-13.17-21.45Z"/>
+	  <rect class="cls-1" y="70.57" width="68.99" height="12.47" rx="3.6" ry="3.6"/>
+	</svg>
+	<div class="main_menu">
+		<div class="menu_item"><a href="/slotter/create/">create</a></div>
+		<div class="menu_item"><span id="active_task"><a href="/slotter/start/">schedule</a></span></div>
+	</div>
+	</div>
+	<div id="number_nav">
+		<div class="num_nav_item"><a href="/slotter/start/">1. select section</a></div>
+		<hr class="nav_connector_done">
+		<div class="num_nav_item"><span id="active_step">2. choose timeslots</span></div>
+		<hr class="nav_connector">
+		<div class="num_nav_item"><span class="step_tbd">3. assign students</span></div>
+		<!--
+		<hr class="nav_connector_end">
+		<span class="ball"></span> -->
+	</div>
+	<table class="timeslot_selection">
+		<thead>
 			<td></td>
-			{% for day in weekdays %}
-			<td>{{day}}</td>
+			{% for day, day_short in weekdays.items %}
+			<th>
+				<span class="weekday">{{day}}</span>
+				<span class="weekday_short">{{day_short}}</span>
+			</th>
 			{% endfor %}
-		</tr>
+		</thead>
 		{% for k, v in table.items %}
 		<tr>
-			<td align="right">{{k|lower}}</td>
+			<td>{{k|lower}}</td>
 			{% for i in v %}
 				{% if i == None %}
 				<td></td>
 				{% elif i == "continuation" %}
 
 				{% else %}
-				<td rowspan="{{i.duration}}">{{i}}</td>
+				{% for time, number in availability_numbers.items %}
+				{% if i == time %}
+				<td rowspan="{{i.duration}}" class="proposed_timeslot">
+				<button type="button" id="{{i.pk}}" class="ts_selectable">
+					<span class="timeslot_button_content">{{number}} students</span>
+					<span class="timeslot_button_content_narrow">{{number}}</span>
+				</button>
+				</td>
+				{% endif %}
+				{% endfor %}
 				{% endif %}
 			{% endfor %}
 		</tr>
 		{% endfor %}
 	</table>
-	<br>
-	<table cellpadding="15">
-		<tr>
-			<td valign="top">
-				<form action="/slotter/assign_students">
-					<fieldset>
-						<legend><h3>Timeslots</h3></legend>
-						Select timeslots and the number of students to be assigned to each.<br>
-						<br>
-						{% for o in option_list %}
-						<label for="{{o}}">{{o}}:</label>
-						<select id="{{o}}" name ="{{o}}" required>
-							{% for k in lookup %}
-							<option>{{k}}</option>
-							{% endfor %}
-						</select>
-						<label for="students">#:</label>
-						<input type="number" min="2" max="{{max_students}}" id="students" required><br>
+		<div class="sidebox">
+			<h3>{{sec_name}}</h3>
+			<form action="" method="post">
+				{% csrf_token %}
+				<legend>Choose {{n_written_out}} timeslots</legend>
+					{% if form.non_field_errors %}
+					<div class="error_box_timeslots">
+						<ul>
+						{% for non_field_error in form.non_field_errors %}
+						<li>{{ non_field_error }}
 						{% endfor %}
-					<br>
-					<button type="submit">Submit</button>
-					</fieldset>
-				</form>
-			</td>
-			<td>
-				<h3>Basic Breakdown</h3>
-				<strong>Min number of students per seminar:</strong> {{min_students}}<br>
-				<strong>Number of seminars:</strong> {{n_seminars}}<br>
-				<strong>Possibilities to choose from:</strong> {{n_possibilities}}<br>
-				<br>
-				<strong>Options:</strong><br>
-				<br>
-				{% for k, v in lookup.items %}
-				<strong>{{k}}:</strong> {% for i in v %}{% if i == v|last %}{{i}}{% else %}{{i}},{% endif %} {% endfor %}<br>
+						</ul>
+					</div>
+					{% endif %}
+				<table id="timeslot_form">
+					{% for field in form %}
+					{% if forloop.counter|divisibleby:"2" %}
+						<td>{{ field.label_tag }}</td> <td>{{ field }}</td>
+					</tr>
+					{% else %}
+					{% if field == form.first_ten %}
+					<tr>
+						<td colspan="2">
+							<p><strong>{{field.label_tag}}</strong></p>
+							<p>
+							{{field}}
+							</p>
+						</td>
+					</tr>
+					{% else %}
+					<tr>
+						<td>{{ field.label_tag }}</td> <td><div class="timeslot_dropdown">{{ field }} <span class="focus"></span></div></td>
+					{% endif %}
+					{% endif %}
+					{% endfor %}
+					<tr><td colspan="4"><button type="submit">Submit</button></td></tr>
+				</table>
+			</form>
+		</div>
+		<div class="sidebox_help">
+			<h3>Selection Help</h3>
+			<p>
+			<strong>Number of students:</strong> {{class_total}}<br>
+			<strong>Min number of students per seminar:</strong> {{min_students}}
+			</p>
+			{% if required %}
+				<p>
+				<strong>Required timeslots:</strong> {% for time in required %}{% if time == required|last %}{{time}}{% else %}{{time}},{% endif %}{% endfor %}
+				</p>
+			{% endif %}
+			{% if recommended %}
+				<strong>Recommended timeslots:</strong>
+				<table id="timeslot_pairs">
+				{% for pair in recommended %}
+				<tr>
+				{% for item in pair %}
+				{% if item == pair|last %} <td>{{item}}</td> </tr>
+				{% else %}
+				<td>{{item}}</td> <td>+</td>
+				{% endif %}
 				{% endfor %}
-			</td>
-		</tr>
-	</table>
+				{% endfor %}
+			</table>
+			{% endif %}
+		</div>
+		<script>
+			var selected = []
+			var selectable = []
+			var allTimeslots = []
+			var n = {{n|escapejs}}
+			var timeslotLookup = JSON.parse("{{json_dump|escapejs}}")
+			for (let x in timeslotLookup) {
+				selectable.push(Number(x));
+				allTimeslots.push(Number(x));
+				selectOnClick(x, n);
+			}
+			var comboLookup = JSON.parse("{{json_dump2|escapejs}}")
+
+			var dropdownRecord = []
+
+			for (let i = 1; i <= n; i++) {
+				dropdownRecord.push('')
+			}
+
+			selectFromDropdown(n)
+
+			function changeSelectability() {
+				if (selected.length > 0) {
+					// if only 1 timeslot has been selected, use timeslotLookup to define selectable array
+					if (selected.length == 1) {
+						let onlyTS = selected[0]
+						selectable = timeslotLookup[onlyTS]
+					// if more than 1 timeslot, first use comboLookup to determine the possible combos for the first selected timeslot
+					} else if (selected.length > 1) {
+						let baseTimeslot = selected[0]
+						let possibleCombos = comboLookup[baseTimeslot]
+						let otherSelected = selected.slice(1)
+						// for each additional timeslot selected, narrows down possibleCombos to include only those that contain this timeslot
+						for (let ts of otherSelected) {
+							let newPossCombos = []
+							for (let combo of possibleCombos) {
+								if (combo.includes(Number(ts))) {
+									newPossCombos.push(combo)
+								}
+							}
+							possibleCombos = newPossCombos
+						}
+						// makes an array of the timeslots that are in narrowed down possibleCombos and are not already selected timeslots
+						let remaining = []
+						for (let combo of possibleCombos) {
+							for (let ts of combo) {
+								if (!remaining.includes(ts) && !selected.includes(ts.toString())) {
+									remaining.push(ts)
+								}
+							}
+						}
+						// redefines the selectable array in terms of the timeslots found in the narrowed down possibleCombos
+						selectable = remaining
+						}
+					// actual handling of buttons and form dropdowns now that the timeslots in the selectable array have been determined
+					for (let ts of allTimeslots) {
+						// changes button class and disables buttons not in selectable array
+						if (!selectable.includes(ts) && !selected.includes(ts.toString())) {
+							document.getElementById(ts).className = "ts_deactivated";
+							document.getElementById(ts).disabled = true;
+							// disables options in the dropdown that are not in the selectable array
+							for (let i = 1; i <= n; i++) {
+								let dropdownIDNumber = i
+								let dropdownID = "id_slot" + dropdownIDNumber.toString()
+								var op = document.getElementById(dropdownID).getElementsByTagName("option")
+								for (let index = 0; index < op.length; index++) {
+									if (op[index].value == ts) {
+										op[index].disabled = true
+									}
+								}
+							}
+						// changes button class and re-enables buttons (if previously disabled) if timeslot in selectable array
+						} else if (selectable.includes(ts)) {
+							document.getElementById(ts).className = "ts_selectable";
+							document.getElementById(ts).disabled = false;
+							// re-enables options in the dropdown that are in the selectable array
+							for (let i = 1; i <= n; i++) {
+								let dropdownIDNumber = i
+								let dropdownID = "id_slot" + dropdownIDNumber.toString()
+								var op = document.getElementById(dropdownID).getElementsByTagName("option")
+								for (let index = 0; index < op.length; index++) {
+									if (op[index].value == ts) {
+										op[index].disabled = false
+									}
+								}
+							}
+						// disables or re-enables options in dropdown that are in selected array
+						} else if (selected.includes(ts.toString())) {
+							for (let i = 1; i <= n; i++) {
+								let dropdownIDNumber = i
+								let dropdownID = "id_slot" + dropdownIDNumber.toString()
+								var op = document.getElementById(dropdownID).getElementsByTagName("option")
+								var selectedValue = document.getElementById(dropdownID).value
+								// if the timeslot has been selected in another dropdown, it is disabled
+								if (ts != selectedValue) {
+									for (let index = 0; index < op.length; index++) {
+										if (op[index].value == ts) {
+											op[index].disabled = true
+										}
+									}
+								// if the timeslot has been selected in this dropdown, it is enabled
+								} else if (ts == selectedValue) {
+									for (let index = 0; index < op.length; index++) {
+										if (op[index].value == ts) {
+											op[index].disabled = false
+										}
+									}
+								}
+							}
+						}
+					}
+				// if no timeslots in selected, resets all buttons so that they are selectable
+				} else if (selected.length == 0) {
+					selectable = allTimeslots
+					for (let ts of selectable) {
+						document.getElementById(ts).className = "ts_selectable";
+						document.getElementById(ts).disabled = false;
+						for (let i = 1; i <= n; i++) {
+							let dropdownIDNumber = i
+							let dropdownID = "id_slot" + dropdownIDNumber.toString()
+							var op = document.getElementById(dropdownID).getElementsByTagName("option")
+							for (let index = 0; index < op.length; index++) {
+								if (op[index].value == ts) {
+									op[index].disabled = false
+								}
+							}
+						}
+					}
+				}
+			}
+
+			function selectOnClick(ts_id, n) {
+				// governs button selection/deselection by click
+				document.getElementById(ts_id).addEventListener('click', function() {
+					// adds the clicked timeslot to the list of selected timeslots and changes button class styling to indicate change
+					if (!selected.includes(ts_id) && selected.length < n) {
+						document.getElementById(ts_id).className = "ts_selected";
+						selected.push(ts_id);
+						console.log('added:', ts_id, 'selected:', selected);
+						// removes the clicked timeslot from the list of selected timeslots and changes button class styling accordingly
+					} else if (selected.includes(ts_id)) {
+						document.getElementById(ts_id).className = "ts_selectable";
+						let index = selected.indexOf(ts_id);
+						selected.splice(index, 1);
+						console.log('removed:', ts_id, 'selected:', selected);
+					}
+					// adds timeslots from selected to the dropdowns and clears selections if unselected
+					for (let i = 0; i < n; i++) {
+						let dropdownIDNumber = i + 1;
+						let dropdownID = "id_slot" + dropdownIDNumber.toString();
+						if (typeof selected[i] === 'undefined') {
+							document.getElementById(dropdownID).value = ""
+							dropdownRecord[i] = ''
+						} else {
+							document.getElementById(dropdownID).value = selected[i]
+							dropdownRecord[i] = selected[i]
+						}
+					}
+					changeSelectability()
+				})
+			}
+
+			function selectFromDropdown(n) {
+				// governs selection/deselection from dropdown menus
+				for (let i = 1; i <= n; i++) {
+					let dropdownID = "id_slot" + i.toString();
+					document.getElementById(dropdownID).addEventListener('change', function() {
+						let selectedValue = document.getElementById(dropdownID).value
+						// if a timeslot has been selected
+						if (selectedValue != '') {
+							// if the dropdown previously had no selection, adds selection to the selected array and changes the corresponding button's style, also adds selection to the dropdownRecord array
+							if (dropdownRecord[i-1] == '') {
+								selected.push(selectedValue);
+								dropdownRecord[i-1] = selectedValue;
+								document.getElementById(selectedValue).className = "ts_selected";
+								console.log('added:', selectedValue, 'selected:', selected)
+							} else {
+								// if a value was previously selected and has now been switched, removes the previous selection from the selected array and changes the relevant button's styling; then adds the new selection to the selected array and changes the corresponding button's style; also updates the dropdownRecord array
+								let prevValue = dropdownRecord[i-1]
+								let target = selected.indexOf(prevValue)
+								selected.splice(target, 1)
+								document.getElementById(prevValue).className = "ts_selectable";
+								selected.push(selectedValue)
+								document.getElementById(selectedValue).className = "ts_selected";
+								dropdownRecord[i-1] = selectedValue;
+								console.log('added:', selectedValue, 'removed:', prevValue, 'selected:', selected)
+							}
+						// if a dropdown returns to having no value, then the previously selected value is removed from the selected array and the corresponding button's styling is changed, also the dropdownRecord array is updated accordingly
+						} else if (selectedValue == '') {
+							let prevValue = dropdownRecord[i-1]
+							let target = selected.indexOf(prevValue)
+							dropdownRecord[i-1] = ''
+							selected.splice(target, 1);
+							document.getElementById(prevValue).className = "ts_selectable";
+							console.log('removed:', prevValue, 'selected:', selected)
+						}
+						changeSelectability()
+					})
+				}
+			}
+		</script>
 </body>
 </html>
