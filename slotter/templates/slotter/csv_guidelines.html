@@ -1,0 +1,40 @@
+{% extends "slotter/base_CREATE.html" %}
+
+{% block title %}
+	Import section data
+{% endblock %}
+
+{% block subnav %}
+	<div class="num_nav_item"><a href="/slotter/create/">1. create new section //</a> <a href="/slotter/edit_section/">edit section</a></div>
+	<hr class="nav_connector_done">
+	<div class="num_nav_item"><span id="active_step">2. import data</span></div>
+{% endblock %}
+
+{% block content %}
+<div class="import_error_box">
+<h1>Spreadsheet Guidelines</h1>
+Each row in the spreadsheet should represent a student's data.
+<h2>Biographical data</h2>
+<ul class="full_guidelines">
+<li > the first four columns (A-D) should contain data for <strong>CNetIDs</strong>, <strong>last names</strong>, <strong>first names</strong>, and <strong>pronouns</strong> in exactly that order
+<li> <strong>CNetIDs</strong> can contain alphanumeric characters but no spaces (up to 30 characters)
+<li> <strong>Last names</strong> and <strong>first names</strong> can contain alphabetical characters, hyphens, and spaces (up to 30 characters)
+<li> <strong>Pronoun</strong> specifications can contain alphabetical characters and forward slashes (up to 25 characters), e.g. <strong>they/them/theirs</strong>
+<li> <strong>headers</strong> for these columns can be named however you like, but they can only contain alphabetical characters and spaces
+</ul>
+<h2>Scheduling Data</h2>
+<ul class="full_guidelines">
+<li> additional columns (E and onwards) should indicate a student's availability for a given timeslot
+<li> if a student is available for a time, indicate this with <strong>Available</strong>, and if not, indicate this with <strong>Not available</strong>
+<li> each header should define a timeslot by specifying a <strong>day of the week</strong>, <strong>start time</strong>, and <strong>end time</strong> in that order, e.g. <strong>Monday, 9:30 am - 10:50 am</strong>
+<ul class="sub_guidelines">	
+	<li> the entry must start with an alphabetical character
+	<li> the day of the week must be a weekday and must be identifiable by its first three letters or spelled out in full, e.g. <strong>Wed</strong> or <strong>Wednesday</strong>
+	<li> times must be specified in 12-hour format and end with an <strong>am</strong> or <strong>pm</strong>
+	<li> a hyphen must separate the start time from the end time
+	<li> no leading zeros on times, e.g. <strong>2:00 pm</strong>, <i>not</i> <strong>02:00 pm</strong>
+	<li> square brackets are admissible, e.g. <strong>Availability [Monday, 9:30 am - 10:50 am]</strong>
+</ul>
+</ul>
+</div>
+{% endblock %}

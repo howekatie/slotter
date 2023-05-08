@@ -36,12 +36,13 @@
 		<hr class="nav_connector_done">
 		<div class="num_nav_item"><span id="active_step">2. choose timeslots</span></div>
 		<hr class="nav_connector">
-		<div class="num_nav_item"><span class="step_tbd">3. assign students</span></div>
+		<div class="num_nav_item"><span class="step_tbd">3. assign students // <a href="/slotter/calendar/">check calendar</a></span></div>
 		<!--
 		<hr class="nav_connector_end">
 		<span class="ball"></span> -->
 	</div>
-	<table class="timeslot_selection">
+	<div class="main_for_timeslots">
+	<table class="timeslot_selection timeslot_flex_container">
 		<thead>
 			<td></td>
 			{% for day, day_short in weekdays.items %}
@@ -75,6 +76,7 @@
 		</tr>
 		{% endfor %}
 	</table>
+	<div class="timeslot_flex_container">
 		<div class="sidebox">
 			<h3>{{sec_name}}</h3>
 			<form action="" method="post">
@@ -97,7 +99,7 @@
 					{% else %}
 					{% if field == form.first_ten %}
 					<tr>
-						<td colspan="2">
+						<td colspan="4">
 							<p><strong>{{field.label_tag}}</strong></p>
 							<p>
 							{{field}}
@@ -106,7 +108,7 @@
 					</tr>
 					{% else %}
 					<tr>
-						<td>{{ field.label_tag }}</td> <td><div class="timeslot_dropdown">{{ field }} <span class="focus"></span></div></td>
+						<td class="slot_label">{{ field.label_tag }}</td> <td><div class="timeslot_dropdown">{{ field }} <span class="focus"></span></div></td>
 					{% endif %}
 					{% endif %}
 					{% endfor %}
@@ -125,33 +127,32 @@
 				<strong>Required timeslots:</strong> {% for time in required %}{% if time == required|last %}{{time}}{% else %}{{time}},{% endif %}{% endfor %}
 				</p>
 			{% endif %}
-			{% if recommended %}
-				<strong>Recommended timeslots:</strong>
-				<table id="timeslot_pairs">
-				{% for pair in recommended %}
-				<tr>
-				{% for item in pair %}
-				{% if item == pair|last %} <td>{{item}}</td> </tr>
-				{% else %}
-				<td>{{item}}</td> <td>+</td>
-				{% endif %}
+			{% if same_week_secs|length > 0 %}
+			<legend>Show timeslots from other sections</legend>
+			{% for field in show_combos_form %}
+				<strong>{{field.label_tag}}</strong>
+				<div class="sidebox_multicheckbox_container">
+				{% for checkbox in field %}
+					<div class="sidebox_checkbox_container"><div>{{checkbox.tag}}</div> <div>{{checkbox.choice_label}}</div></div>
 				{% endfor %}
-				{% endfor %}
-			</table>
+				</div>
+			{% endfor %}
 			{% endif %}
 		</div>
+		</div>
+	</div>
 		<script>
 			var selected = []
 			var selectable = []
 			var allTimeslots = []
-			var n = {{n|escapejs}}
-			var timeslotLookup = JSON.parse("{{json_dump|escapejs}}")
+			const n = {{n|escapejs}}
+			const timeslotLookup = JSON.parse("{{json_dump|escapejs}}")
 			for (let x in timeslotLookup) {
 				selectable.push(Number(x));
 				allTimeslots.push(Number(x));
 				selectOnClick(x, n);
 			}
-			var comboLookup = JSON.parse("{{json_dump2|escapejs}}")
+			const comboLookup = JSON.parse("{{json_dump2|escapejs}}")
 
 			var dropdownRecord = []
 
@@ -160,6 +161,85 @@
 			}
 
 			selectFromDropdown(n)
+
+			const savedComboLookup = JSON.parse("{{saved_combo_lookup|escapejs}}")
+			const savedComboCount = JSON.parse("{{saved_combo_count|escapejs}}")
+			let selectedCombos = [];
+			let markedTimeslots = [];
+
+			function addCheckboxListeners() {
+				for (let section in savedComboCount) {
+					for (let n = 0; n < savedComboCount[section]; n++) {
+						let checkbox = document.getElementById("id_combos_for_sec_" + section + "_" + n)
+						checkbox.addEventListener("change", function() {
+							let combo = checkbox.value
+							if (checkbox.checked == true) {
+								uncheckRest(section, n)
+								selectedCombos.push(combo)
+								console.log("combos", selectedCombos)
+								addTimeslotsToMarked()
+							} else if (checkbox.checked == false) {
+								let index = selectedCombos.indexOf(combo)
+								selectedCombos.splice(index, 1)
+								removeTimeslotsFromMarked(combo)
+								console.log("combos", selectedCombos)
+							}
+						})
+					}
+				}
+			}
+
+			function uncheckRest(section, current) {
+				for (let n = 0; n < savedComboCount[section]; n++) {
+					if (n !== current) {
+						let checkbox = document.getElementById("id_combos_for_sec_" + section + "_" + n);
+						let combo = checkbox.value
+						if (checkbox.checked == true) {
+							checkbox.checked = false
+							let index = selectedCombos.indexOf(combo)
+							selectedCombos.splice(index, 1)
+							removeTimeslotsFromMarked(combo)
+						}
+					}
+				}
+			}
+
+			function addTimeslotsToMarked() {
+				for (let combo of selectedCombos) {
+					for (let ts of savedComboLookup[combo]) {
+						if (!markedTimeslots.includes(ts)) {
+							markedTimeslots.push(ts)
+						}
+					}
+				}
+				console.log(markedTimeslots)
+				for (let ts of markedTimeslots) {
+					if (selectable.includes(ts)) {
+						let tsButton = document.getElementById(ts);
+						tsButton.className = "ts_other_section";
+					}
+				}
+			}
+
+			function removeTimeslotsFromMarked(combo) {
+				for (let ts of savedComboLookup[combo]) {
+					let verdicts = []
+					for (let c of selectedCombos) {
+						verdicts.push(savedComboLookup[c].includes(ts))
+					}
+					if (!verdicts.includes(true)) {
+						let index = markedTimeslots.indexOf(ts)
+						markedTimeslots.splice(index, 1)
+						if (selectable.includes(ts)) {
+							let tsButton = document.getElementById(ts);
+							tsButton.className = "ts_selectable";
+						}
+					}
+				}
+				console.log(markedTimeslots)
+			}
+
+			addCheckboxListeners()
 
 			function changeSelectability() {
 				if (selected.length > 0) {
@@ -213,7 +293,12 @@
 							}
 						// changes button class and re-enables buttons (if previously disabled) if timeslot in selectable array
 						} else if (selectable.includes(ts)) {
-							document.getElementById(ts).className = "ts_selectable";
+							// checks if any selectable timeslots should be marked as part of a saved combo from another section
+							if (markedTimeslots.includes(ts)) {
+								document.getElementById(ts).className = "ts_other_section";
+							} else {
+								document.getElementById(ts).className = "ts_selectable";
+							}
 							document.getElementById(ts).disabled = false;
 							// re-enables options in the dropdown that are in the selectable array
 							for (let i = 1; i <= n; i++) {
@@ -255,7 +340,12 @@
 				} else if (selected.length == 0) {
 					selectable = allTimeslots
 					for (let ts of selectable) {
-						document.getElementById(ts).className = "ts_selectable";
+						// first checks to see if timeslot should be marked as belonging to a saved combo for another section
+						if (markedTimeslots.includes(ts)) {
+							document.getElementById(ts).className = "ts_other_section";
+						} else {
+							document.getElementById(ts).className = "ts_selectable";
+						}
 						document.getElementById(ts).disabled = false;
 						for (let i = 1; i <= n; i++) {
 							let dropdownIDNumber = i
@@ -340,6 +430,39 @@
 					})
 				}
 			}
+
+			function addSavedSelections() {
+				// if the user has arrived at the timeslots page via the saved combination button, this function selects all the relevant buttons and fills out the timeslot fields as though the user had made the selections themselves
+				let comboString = '{{combination_string|escapejs}}'
+				// checks to see if the relevant entry in the session actually has something saved in it -- this only happens if the user has clicked one of the saved combination buttons
+				if (comboString.length > 0) {
+					// parses the string into smaller strings of the form 'timeslotpk-numberofstudents'
+					let comboArray = comboString.split(',');
+					let n = 1
+					for (let combo of comboArray) {
+						let comboPair = combo.split('-');
+						// fills in the number of students for the relevant timeslot field
+						let nStudentField = document.getElementById("id_n_students" + n)
+						nStudentField.value = comboPair[1]
+						// identifies and selects the relevant timeslot button
+						let button = document.getElementById(comboPair[0])
+						button.className = "ts_selected";
+						selected.push(comboPair[0])
+						// selects the relevant value in the dropdown
+						let dropdown = document.getElementById("id_slot" + n)
+						dropdown.value = comboPair[0]
+						dropdownRecord[n] = selected[n]
+						n = n + 1
+					}
+				}
+				// runs the function that deactivates the rest of the timeslot buttons
+				changeSelectability()
+				// selects the "show me al the options" radio button -- now all the form fields are filled out
+				let optionsRadio = document.getElementById("id_first_ten_1");
+				optionsRadio.checked = true;
+			}
+
+			addSavedSelections()
 		</script>
 </body>
 </html>

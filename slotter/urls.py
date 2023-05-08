@@ -12,15 +12,16 @@ urlpatterns = [
     path('section_edited/', views.section_edited, name='section_edited'),
     path('section_deleted/', views.section_deleted, name='section_deleted'),
     path('timeslots/', views.timeslots, name='timeslots'),
-    path('choose_timeslots/', views.choose_timeslots, name='choose_timeslots'),
     path('start/', views.start, name='start'),
     path('assign_students/', views.assign_students, name='assign_students'),
     path('calendar/', views.calendar, name='calendar'),
     path('import/', views.import_schedules, name='import_schedules'),
     path('data_imported/', views.data_imported, name='data_imported'),
-    path('testing/', views.testing_page, name='testing_page'),
     path('assignment_churn/', views.assignment_churn, name='assignment_churn'),
-     path('save_timeslots/', views.save_timeslots_combo, name='save_timeslots_combo'),
+    path('save_timeslots/', views.save_timeslots_combo, name='save_timeslots_combo'),
+    path('set_timeslot_session_data/', views.set_timeslot_session_data, name='set_timeslot_session_data'),
+    path('delete_timeslot_combo/', views.delete_timeslot_combo, name='delete_timeslot_combo'),
+    path('csv_guidelines/', views.csv_guidelines, name='csv_guidelines'),
     ]
 
 urlpatterns += staticfiles_urlpatterns()

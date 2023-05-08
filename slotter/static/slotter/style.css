@@ -27,6 +27,14 @@ h2 {
 	padding-top: 0px;
 }
 
+ul.full_guidelines li {
+	margin-top: 0.4em;
+}
+
+ul.sub_guidelines {
+	margin-top: 0.6em;
+}
+
 a:link {
 	color: #000000;
 	text-decoration: none;
@@ -247,8 +255,7 @@ table.timeslot_selection {
 	table-layout: fixed;
 	color: #000000;
 	min-width: 65%;
-	margin-left: 30px;
-	margin-bottom: 30px;
+	margin: 0 15px 40px 30px;
 	float: left;
 }
 
@@ -335,6 +342,10 @@ table#timeslot_form td {
 	padding: 2px;
 }
 
+.slot_label {
+	min-width: 4em;
+}
+
 table#timeslot_pairs {
 	margin-top: 10px;
 }
@@ -382,6 +393,18 @@ div.short_form_label {
 	display: inline-block;
 }
 
+div.short_form_label_dropdown {
+	border: none;
+	padding: 10px 5px 2px 0;
+	display: inline-block;
+}
+
+div.short_form_label_multi_inline {
+	border: none;
+	padding: 10px 5px 2px 15px;
+	display: inline-block;
+}
+
 div.short_form_field {
 	border: none;
 	padding: 2px 5px 2px 0;
@@ -407,12 +430,12 @@ div.button_like {
 	background-color: #ffffff;
 	border: 1.5px solid #1634a3;
 	border-radius: 5px;
-	padding: .175em .4em .175em .4em;
+	padding: .07em .4em .07em .4em;
 	width: fit-content;
-	font-size: .85em;
+	font-size: .9em;
 	text-align: center;
 	display: inline-block;
-	margin: 10px 10px 5px 0;
+	margin: 13px 10px 5px 0;
 }
 
 div.button_like:hover {
@@ -495,11 +518,39 @@ hr.assg_spacer {
 	padding: 20px 20px 20px 20px;
 }
 
+.saved_combo_box {
+	max-width: 30em;
+	transition: opacity 0.15s ease-out;
+}
+
+.import_instructions {
+	max-width: 30em;
+	margin-top: 1.5em;
+	margin-left: 0.25em;
+}
+
+.import_error_box {
+	width: 70%;
+	font-size: 1.1em;
+}
+
+.import_coords_box {
+	margin-left: 3em;
+	font-weight: 800;
+}
+
 .one_line_form_box {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	margin-top: 10px;
+}
+
+.one_line_form_box_no_margin {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-top: 0;
 }
 
 #section_info_box {
@@ -528,6 +579,17 @@ hr.assg_spacer {
 
 .compressed_field {
 	margin: 5px 10px 0 0;
+}
+
+.sidebox_checkbox_container {
+	font-size: .95em;
+	display: flex;
+	margin: 8px 0 5px 5px;
+}
+
+.sidebox_multicheckbox_container {
+	margin-top: 10px;
+	margin-bottom: 10px;
 }
 
 .save_timeslots_box {
@@ -588,6 +650,23 @@ hr.assg_spacer {
 	align-items: center;
 }
 
+.short_form_box_right {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+}
+
+.calendar_toggles_box {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+}
+
+.saved_combos {
+	margin-left: 50px;
+}
+
 table#student_import_data {
 	border: none;
 	border-collapse: collapse;
@@ -637,6 +716,174 @@ table.student_assgs td:nth-child(2) {
 	font-weight: 800;
 }
 
+table#quarter_long_cal {
+	border-spacing: 0;
+	width: 85%;
+	table-layout: fixed;
+	margin-bottom: 30px;
+	margin-right: 0;
+}
+
+table#quarter_long_cal th.weekday_header {
+	background-color: #f7512b;
+	border: 1.5px solid #f7512b;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	color: #fff;
+	width: 18%;
+}
+
+table#quarter_long_cal th.weekday_header_left {
+	background-color: #f7512b;
+	border: 1.5px solid #f7512b;
+	border-top-left-radius: 5px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	color: #fff;
+	width: 18%;
+}
+
+table#quarter_long_cal th.weekday_header_right {
+	background-color: #f7512b;
+	border: 1.5px solid #f7512b;
+	border-top-right-radius: 5px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	color: #fff;
+	width: 18%;
+}
+
+table#quarter_long_cal th:nth-child(1) {
+	padding: 10px 10px 10px 0;
+	width: 10%;
+}
+
+table#quarter_long_cal td {
+	border-right: 1px solid #000;
+	border-bottom: 1px solid #000;
+	border-top: none;
+	border-left: none;
+	margin: 0;
+	padding-left: 10px;
+}
+
+table#quarter_long_cal td:nth-child(1) {
+	border-left: 1px solid #000;
+}
+
+table#quarter_long_cal td.date_band {
+	border-bottom: none;
+	padding: 10px 0 2px 10px;
+	font-weight: 800;
+}
+
+table#quarter_long_cal td.date_band_monday {
+	border-bottom: none;
+	padding: 10px 0 2px 10px;
+	font-weight: 800;
+	border-left: 1px solid #000;
+}
+
+table#weekly_calendar {
+	border-collapse: collapse;
+	width: 85%;
+	margin-bottom: 30px;
+	table-layout: fixed;
+}
+
+table#weekly_calendar th {
+	padding: 5px 5px 10px 5px;
+	width: 18%;
+}
+
+table#weekly_calendar th:nth-child(1) {
+	padding: 5px 10px 5px 0;
+	text-align: right;
+	width: 10%;
+}
+
+table#weekly_calendar td {
+	text-align: center;
+	border-top: 1.5px solid #f97369;
+	border-bottom: 1.5px solid #f97369;
+}
+
+table.saved_combos_table {
+	border: 0;
+	border-collapse: collapse;
+	margin-top: 2px;
+}
+
+table.saved_combos_table td {
+	border-top: 0;
+}
+
+table.saved_combos_table button {
+	margin: 0;
+}
+
+table.saved_combos_table td:nth-child(2) {
+	width: 4em;
+	text-align: center;
+}
+
+table.saved_combos_table td {
+	padding-top: 8px;
+	padding-bottom: 8px;
+}
+
+table.saved_combos_table tr:first-child td {
+	border-top: 0;
+}
+
+table.saved_combos_table tr:last-child td {
+	border-bottom: 0;
+}
+
+.calendar_buttons_box {
+	width: 85%;
+	margin-top: 30px;
+	text-align: right;
+}
+
+.calendar_header_box {
+	display: flex;
+	width: 85%;
+	margin-top: 5px;
+	margin-bottom: 10px;
+}
+
+.calendar_header_item {
+	flex: 1;
+	text-align: right;
+	padding-top: 5px;
+}
+
+.calendar_header_item:nth-of-type(1) {
+	flex: 2;
+	padding-left: 10px;
+	text-align: left;
+}
+
+.calendar_header_item:nth-of-type(3) {
+	flex: 0.5;
+}
+
+.main_for_timeslots {
+	display: flex;
+	width: 100%;
+	flex-wrap: wrap;
+	align-items: flex-start;
+}
+
+.timeslot_flex_container:nth-of-type(1) {
+	flex: 5;
+}
+
+.timeslot_flex_container:nth-of-type(2) {
+	flex: 0.5;
+}
+
 .sidebox {
 	width: fit-content;
 	margin: 0 15px 30px 30px;
@@ -647,12 +894,28 @@ table.student_assgs td:nth-child(2) {
 }
 
 .sidebox_help {
-	max-width: 25%;
 	margin: 0 15px 30px 30px;
 	border: 1.5px solid #f7512b;
 	border-radius: 5px;
 	padding: 0 20px 20px 20px;
+	min-width: 15em;
+	max-width: 95%;
 	float: left;
+}
+
+.sidebox_help legend {
+	margin: 20px 0 15px 0;
+}
+
+.checkbox_row {
+	display: flex;
+	flex-wrap: wrap;
+	margin-bottom: 0.5em;
+}
+
+.checkbox_pair {
+	margin-bottom: 0.25em;
+	margin-right: 1.1em;
 }
 
 legend {
@@ -725,6 +988,11 @@ span#ts_saved_message {
 	transition: opacity 0.2s ease-out;
 }
 
+span.calendar_timeslot {
+	display: block;
+	font-size: .9em;
+}
+
 a#cancel_delete {
 	cursor: pointer;
 }
@@ -771,14 +1039,20 @@ button.ts_selected {
 	border: 1.5px solid #f7512b;
 }
 
-button.ts_selectable:focus, button.ts_selected:focus {
+button.ts_other_section {
+	background: transparent;
+	color: #1634a3;
 	border: 1.5px solid #1634a3;
+}
+
+button.ts_selectable:focus, button.ts_selected:focus, button.calendar_toggle_selected:focus, button.calendar_toggle_unselected:focus {
+	border: 1.5px solid #f97369;
 	border-radius: 5px;
-	box-shadow: 0 0 0 1.5pt #1634a3;
+	box-shadow: 0 0 0 1.5pt #f97369;
 	outline: none;
 }
 
-button.ts_selectable:active, button.ts_selected:active {
+button.ts_selectable:active, button.ts_selected:active, button.calendar_toggle_selected:active, button.calendar_toggle_unselected:active {
 	border: 1.5px solid #f97369;
 	border-radius: 5px;
 	box-shadow: 0 0 0 1.5pt #f97369;
@@ -791,6 +1065,35 @@ button.ts_deactivated {
 	border: none;
 	cursor: default;
 	border: 1.5px solid transparent;
+}
+
+button.calendar_toggle_selected {
+	font-size: 1.1em;
+	color: #fff;
+	padding: 5px;
+	background-color: #f7512b;
+	border: 1.5px solid #f7512b;
+}
+
+button.calendar_toggle_unselected {
+	font-size: 1.1em;
+	color: #f7512b;
+	padding: 5px;
+	background-color: transparent;
+	border: 1.5px solid #f7512b;
+}
+
+button.calendar_nav {
+	margin-top: 8px;
+	padding: 3px 8px 3px 8px;
+	font-size: 0.9em;
+}
+
+button.calendar_nav_disabled {
+	margin-top: 8px;
+	padding: 3px 8px 3px 8px;
+	font-size: 0.9em;
+	opacity: 50%;
 }
 
 #form_wrapper {
@@ -934,7 +1237,7 @@ input[type="file"] {
 	border: 1.5px solid #1634a3;
 	border-radius: 5px;
 	font-family: 'Inconsolata';
-	max-width: 50ch;
+	max-width: 80ch;
 	font-size: .8em;
 	padding: .2em;
 	margin-top: 8px;
@@ -1226,6 +1529,10 @@ select, .timeslot_dropdown::after, .section_dropdown::after, .short_dropdown::af
 	transition: opacity 0.2s ease-out;
 }
 
+.combo_row {
+	transition: opacity 0.1s ease-out;
+}
+
 @media screen and (max-width: 600px) {
 	#header {
 		width: 100%;
@@ -1338,6 +1645,12 @@ select, .timeslot_dropdown::after, .section_dropdown::after, .short_dropdown::af
 		margin-left: 20px;
 	}
 
+	.multicheckbox_container input[type="checkbox"] {
+		width: 1em;
+		height: 1em;
+		margin-left: 0;
+	}
+
 	.timeslot_button_content {
 		display: none;
 	}
@@ -1411,6 +1724,15 @@ select, .timeslot_dropdown::after, .section_dropdown::after, .short_dropdown::af
 	}
 	table#student_import_data td {
 	padding: 5px 15px 5px 0;
+	}
+
+	.sidebox_checkbox_container {
+		margin-left: 20px;
+	}
+
+	.import_error_box {
+		width: 100%;
+		font-size: 1.1em;
 	}
 
 }

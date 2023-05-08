@@ -1,74 +1,131 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<title>Calendar</title>
-</head>
-<body>
-	<form action="" method="post">
-	{% csrf_token %}
-	<legend><h2>Schedule Exploration</h2></legend>
-	{% for error in form0.non_field_errors %}
-	{{error}}
-	{% endfor %}
-	<br>
-	{% for field in form0 %}
-	{{ field.label_tag }} {{ field }}
-	{% endfor %}
-	<input type="submit" value="Change Quarter">
-	</form>
+{% extends "slotter/base_SCHEDULE.html" %}
+
+{% block title %}
+Check calendar
+{% endblock %}
+
+
+{% block subnav %}
+		<!--
+		<div class="num_nav_item"><a href="/slotter/start/">1. select section</a></div>
+		<hr class="nav_connector_done">
+		<div class="num_nav_item"><a href="/slotter/timeslots/">2. choose timeslots</a></div>
+		<hr class="nav_connector_done">
+		<div class="num_nav_item"><a href="/slotter/assign_students/">3. assign students //</a> <span id="active_step"> check calendar</span></div>
+		-->
+		<div class="num_nav_item"><span class="step_tbd"><a href="/slotter/start/">1. select section</a></span></div>
+		<hr class="nav_connector">
+		<div class="num_nav_item"><span class="step_tbd">2. choose timeslots</span></div>
+		<hr class="nav_connector">
+		<div class="num_nav_item"><span class="step_tbd">3. assign students //</span> <span id="active_step"> check calendar</span></div>
+		
+{% endblock %}
+
+{% block content %}
+	<div class="calendar_toggles_box">
+		<div class="section_box">
+			<form action="" method="post">
+			{% csrf_token %}
+			<legend>Select quarter</legend>
+			<div class="short_form">
+			{% for error in form0.non_field_errors %}
+			{{error}}
+			{% endfor %}
+				<div class="short_form_box">
+					<div class="short_form_label_dropdown">{{ form0.year.label_tag }}</div> 
+					<div class="short_dropdown">{{ form0.year }}</div>
+					<div class="short_form_label_multi_inline">{{ form0.quarter.label_tag }}</div> 
+					<div class="med_dropdown">{{ form0.quarter }}</div>
+					<div class="short_form_label_multi_inline"><button class="in_line" type="submit">Submit</button></div>
+				</div>
+			</div>
+			</form>
+		</div>
 	{% if chosen_year %}
-	<br>
-	<form action="" method="post">
-	{% csrf_token %}
-	{% for field in form %}
-	<strong>{{ field.label_tag }}</strong> {{ field }}<br>
-	{% endfor %}
-	</form>
-	<button id="quarter_button" type="button" class="selected">Quarter</button> <button id="weekly_button" type="button">Weekly</button>
-	<br>
-	<br>
-	<div id="jump_week_form_box">
+	<div class="saved_combos">
 		<form action="" method="post">
 		{% csrf_token %}
-		{% for field in form2 %}
-		{{ field.label_tag }} {{ field }}
+		{% for field in form %}
+		<strong>{{ field.label_tag }}</strong>
+		<p>
+			{{ field }}
+		</p>
 		{% endfor %}
 		</form>
 	</div>
-	<button id="prev_week_button" type="button">Prev</button>
-	<button id="next_week_button" type="button">Next</button>
+</div>
+<div class="calendar_buttons_box">
+	<button id="quarter_button" type="button" class="calendar_toggle_selected">Quarterly</button> <button id="weekly_button" type="button" class="calendar_toggle_unselected"> Weekly</button>
+</div>
+	<div class="calendar_header_box">
+		<div class="calendar_header_item">
+			<h1>
+				{{chosen_quarter_name}} {{chosen_year}} <span id="week_heading"></span>
+			</h1>
+		</div>
+		<div id="jump_week_form_box" class="calendar_header_item">
+			<form action="" method="post">
+			{% csrf_token %}
+			<div class="short_form_box_right">
+			<div class="short_form_label_dropdown">{{ form2.jump_to_week.label_tag }}</div> <div class="short_dropdown">{{ form2.jump_to_week }}</div>
+			</div>
+			</form>
+		</div>
+		<div class="calendar_header_item">
+			<button id="prev_week_button" type="button" class="calendar_nav">Prev</button>
+			<button id="next_week_button" type="button" class="calendar_nav">Next</button>
+		</div>
+	</div>
 	{# quarter-long calendar #}
-	<h2>{{chosen_quarter_name}} {{chosen_year}} <span id="week_heading"></span></h2>
-	<table border="1" id="quarter_long_cal">
+	<table id="quarter_long_cal">
 		<tr>
-			<td></td>
+			<th></th>
 			{# header row #}
 			{% for day in mon_to_fri %}
-			<td width="18%"><center><strong>{{day}}</strong></center></td>
+				{% if day == mon_to_fri|first %}
+				<th class="weekday_header_left"><center>{{day}}</center></th>
+				{% elif day == mon_to_fri|last %}
+				<th class="weekday_header_right"><center>{{day}}</center></th>
+				{% else %}
+				<th class="weekday_header"><center>{{day}}</center></th>
+				{% endif %}
 			{% endfor %}
 		</tr>
 		{% for row, list in quarter_calendar.items %}
 		<tr>
 			{# week column #}
 			{% if row == 9 and chosen_quarter == 1 %}
-			<td rowspan="2"><center><strong>Thanksgiving</strong></center></td>
+			<th rowspan="2"><center><strong>Thanksgiving</strong></center></th>
 			{% elif row == 10 and chosen_quarter == 1 %}
-			<td rowspan="2"><center><strong>Week 9</strong></center></td>
+			<th rowspan="2"><center><strong>Week 9</strong></center></th>
 			{% else %}
-			<td rowspan="2"><center><strong>Week {{row}}</strong></center></td>
+			<th rowspan="2"><center><strong>Week {{row}}</strong></center></th>
 			{% endif %}
 			{% for day in list %}
 			{# date band #}
 			{% if day|date:"j" == "1" %}
 			{# prints month abbreviation if day is the 1st of the month#}
-			<td>{{ day|date:"M j" }}</td>
+				{% if day == list|first %}
+				<td class="date_band_monday">{{ day|date:"M j" }}</td>
+				{% else %}
+				<td class="date_band">{{ day|date:"M j" }}</td>
+				{% endif %}
+			{% elif day|date:"l" == "Monday" and day|date:"j" == "2" %}
+			{# prints month abbreviation if the day is not the first of the month but is the first appearance of that month because the first is on a Sunday #}
+			<td class="date_band_monday">{{ day|date:"M j" }}</td>
+			{% elif day|date:"l" == "Monday" and day|date:"j" == "3" %}
+			{# prints month abbreviation if the day is not the first of the month but is the first appearance of that month because the first is on a Saturday #}
+			<td class="date_band_monday">{{ day|date:"M j" }}</td>
 			{% elif day == list|first and row == 1 %}
 			{# prints month abbreviation if this is the first square in the calendar #}
-			<td>{{ day|date:"M j" }}</td>
+			<td class="date_band_monday">{{ day|date:"M j" }}</td>
 			{% else %}
 			{# otherwise just prints date #}
-			<td>{{ day|date:"j" }}</td>
+				{% if day == list|first %}
+				<td class="date_band_monday">{{ day|date:"j" }}</td>
+				{% else %}
+				<td class="date_band">{{ day|date:"j" }}</td>
+				{% endif %}
 			{% endif %}
 			{% endfor %}
 				</tr>
@@ -117,8 +174,6 @@
 		</tr>
 		{% endfor %}
 	</table>
-
-	<div id="main">
 	</div>
 	<script>
 		const sectionLookup = JSON.parse("{{json_combo_count|escapejs}}")
@@ -185,9 +240,9 @@
 
 		function quarterButtonToggle() {
 			quarterButton.addEventListener("click", function() {
-				quarterCalendar.style.display = "block"
-				quarterButton.class = "selected"
-				weekButton.class = "unselected"
+				quarterCalendar.style.display = "table"
+				quarterButton.className = "calendar_toggle_selected"
+				weekButton.className = "calendar_toggle_unselected"
 				jumpWeekForm.style.display = "none";
 				weekHeading.style.display = "none";
 				activeCal = 'quarter'
@@ -202,8 +257,8 @@
 
 		function weekButtonToggle() {
 			weekButton.addEventListener("click", function() {
-				weekButton.class = "selected";
-				quarterButton.class = "selected";
+				weekButton.className = "calendar_toggle_selected";
+				quarterButton.className = "calendar_toggle_unselected";
 				let earliestWeek = findEarliestWeekOfChecked()
 				weekHeading.style.display = "inline-block";
 				weekHeading.innerHTML = '';
@@ -249,12 +304,24 @@
 			if (Number(activeWeekWeeklyCal) > 1 && activeWeekWeeklyCal < nWeeks) {
 				prevWeekButton.style.display = "inline-block";
 				nextWeekButton.style.display = "inline-block";
+				prevWeekButton.disabled = false;
+				nextWeekButton.disabled = false;
+				prevWeekButton.className = "calendar_nav";
+				nextWeekButton.className = "calendar_nav";
 			} else if (Number(activeWeekWeeklyCal) == 1) {
-				prevWeekButton.style.display = "none";
+				prevWeekButton.style.display = "inline-block";
 				nextWeekButton.style.display = "inline-block";
+				prevWeekButton.disabled = true;
+				prevWeekButton.className = "calendar_nav_disabled";
+				nextWeekButton.disabled = false;
+				nextWeekButton.className = "calendar_nav";
 			} else if (Number(activeWeekWeeklyCal) == nWeeks) {
 				prevWeekButton.style.display = "inline-block";
-				nextWeekButton.style.display = "none";
+				nextWeekButton.style.display = "inline-block";
+				nextWeekButton.disabled = true;
+				nextWeekButton.className = "calendar_nav_disabled";
+				prevWeekButton.disabled = false;
+				prevWeekButton.className = "calendar_nav";
 			}
 		}
 
@@ -417,7 +484,8 @@
 					if (conflictKeys.includes(time) && conflictSpan == null) {
 						let newSpan = document.createElement('span');
 						newSpan.id = date + '-' + time + "-conflict"
-						newSpan.class = "calendar_conflict";
+						newSpan.className = "red_highlight";
+						newSpan.classList.add("calendar_timeslot");
 						let sectionList = []
 						for (let timeslot of conflicts[time]) {
 							for (let entry of comboLookup) {
@@ -427,7 +495,7 @@
 								}
 							}
 						}
-						newSpan.innerHTML +=  convertMinutes(time) + " - conflict between "
+						newSpan.innerHTML +=  convertMinutes(time) + " - conflict btwn "
 						for (let section of sectionList) {
 							if (sectionList.indexOf(section) == sectionList.length - 1) {
 								newSpan.innerHTML += section
@@ -441,7 +509,7 @@
 							if (timeslot == entry.id) {
 								let newSpan = document.createElement('span');
 								newSpan.id = entry.id;
-								newSpan.class = "calendar_timeslot";
+								newSpan.className = "calendar_timeslot";
 								let timeslotText =  convertMinutes(entry.time) + " - " + convertToSectionName(entry.section);
 								newSpan.innerHTML = timeslotText;
 								square.appendChild(newSpan);
@@ -540,11 +608,10 @@
 
 		function buildWeekTable(week) {
 			let table = document.createElement('table');
-			table.border = 1
 			table.id = "weekly_calendar"
 			// builds weekday header
 			let thead = document.createElement('thead');
-			let weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+			let weekdays = ['Mon,', 'Tue,', 'Wed,', 'Thur,', 'Fri,'];
 			let daysForWeek = weekByWeek[week];
 			for (let n = -1; n < 5; n++) {
 				let th = document.createElement('th');
@@ -622,6 +689,7 @@
 							cell.innerHTML = '';
 							let newSpan = document.createElement('span');
 							newSpan.id = "weekcal-" + day + "-" + time + "-conflict";
+							newSpan.className = "red_highlight";
 							// gets the names of the sections involved in the conflict
 							let sections = [];
 							for (let t of conflicts[time]) {
@@ -632,7 +700,7 @@
 								}
 							}
 							// actually writes and inserts the conflict message
-							newSpan.innerHTML += "Conflict between ";
+							newSpan.innerHTML += "Conflict btwn ";
 							for (let section of sections) {
 								if (sections.indexOf(section) < sections.length - 1) {
 									newSpan.innerHTML += section + ", "
@@ -665,5 +733,4 @@
 		}
 	</script>
 	{% endif %}
-</body>
-</html>
+{% endblock %}

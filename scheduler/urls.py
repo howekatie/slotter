@@ -15,8 +15,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.conf.urls import handler500
 
 urlpatterns = [
     path('slotter/', include('slotter.urls')),
     path('admin/', admin.site.urls),
 ]
+
+handler404 = 'slotter.views.page_not_found'
+handler500 = 'slotter.views.server_error'

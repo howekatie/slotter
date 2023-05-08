@@ -2,8 +2,14 @@ from django import forms
 from django.forms import ModelMultipleChoiceField, ModelForm
 from slotter.models import Section, Student, Timeslot, Combination
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 
 from datetime import date
+
+def file_size(value):
+	limit = 100 * 1024
+	if value.size > limit:
+		raise ValidationError('File is too large. Size should not exceed 100 kb,')
 
 class TimeslotChoiceField(forms.ChoiceField):
 	def to_python(self, value):
@@ -30,12 +36,20 @@ class SelectTimeslots(forms.Form):
 		max_s = kwargs.pop("max_s")
 		super(SelectTimeslots, self).__init__(*args, **kwargs)
 
+		# check if the # of students in the class and the # of timeslots mean that the students can be divided evenly into groups
+
+		class_division_quot = divmod(self.class_t, self.number)[0]
+		class_division_remainder = divmod(self.class_t, self.number)[1]
+
 		# making variable # of form fields
 
 		n = 1
 		while n <= self.number:
 			self.fields["slot" + str(n)] = TimeslotChoiceField(choices=self.t, label="Slot " + str(n))
-			self.fields["n_students" + str(n)] = forms.IntegerField(min_value=2, max_value=max_s, label="#:")
+			if class_division_remainder == 0:
+				self.fields["n_students" + str(n)] = forms.IntegerField(min_value=2, max_value=max_s, label="#:", initial=class_division_quot)
+			else: 
+				self.fields["n_students" + str(n)] = forms.IntegerField(min_value=2, max_value=max_s, label="#:")
 			n = n + 1
 		FIRST_TEN = [
 			(True, 'Just give me the first 10'),
@@ -97,17 +111,20 @@ class SelectTimeslots(forms.Form):
 		return cleaned_data
 
 class ImportSectionCSV(forms.Form):
-	# the exclusion isn't excluding everything -- sections that I've renamed recently tend to show up in the dropdown, even though these sections have never had CSV files - not sure if this is because the former name is associated with another section that does have a spreadsheet? Or if any newly saved section is going to show up like this?
-	section = forms.ModelChoiceField(label='Section', queryset=Section.objects.exclude(spreadsheet=''), to_field_name='name')
+	section = forms.ModelChoiceField(label='Section', queryset=Section.objects.all(), to_field_name='name')
+	spreadsheet = forms.FileField(label='Spreadsheet', widget=forms.FileInput(), validators=[FileExtensionValidator(allowed_extensions=['csv']), file_size])
 
 class ConfirmCSVImport(forms.Form):
-	confirmation = forms.BooleanField(label='Save imported data?')
-
-class ClearImportedData(forms.Form):
-	clear_data_confirmation = forms.BooleanField(label='Clear existing data?')
+	def __init__(self, *args, **kwargs):
+		self.json_data = kwargs.pop("json_data")
+		self.assoc_students = kwargs.pop("assoc_students")
+		super(ConfirmCSVImport, self).__init__(*args, **kwargs)
+		self.fields["spreadsheet_data"] = forms.CharField(widget=forms.HiddenInput, initial=self.json_data)
+		if self.assoc_students > 0:
+			self.fields["confirm_delete"] = forms.BooleanField(label='Clear existing data and proceed with import?')
 
 class ChooseSection(forms.Form):
-	section = forms.ModelChoiceField(label='Section', queryset=Section.objects.all(), to_field_name='name')
+	section = forms.ModelChoiceField(label='Section', queryset=Section.objects.all())
 
 class ChooseQuarter(forms.Form):
 	
@@ -202,14 +219,27 @@ class InitialSetup(forms.Form):
 
 		# ensures that the number of seminars * the min number of students per seminar is not > the number of students actually in the selected section
 
-		sec_name = self.section
+		sec_pk = self.section
 		seminar_n = int(cleaned_data.get("n_seminars"))
 		min_student_n = int(cleaned_data.get("min_students"))
-		student_list = Student.objects.filter(section__name=sec_name)
+		student_list = Student.objects.filter(section__pk=sec_pk)
 		cap = len(student_list)
 		projected_students = seminar_n*min_student_n
 		if projected_students > cap:
 			self.add_error(None, ValidationError('Seminars × students per seminar exceeds total # of students enrolled'))
+
+		# ensures that the number of seminars specified will actually yield at least one possible combination of timeslots (having too few groups -- like dividing the class in two -- makes it likely that there just won't be any two timeslots that will cover the whole class) --> the current validation below is insufficient, since as long as there are at least as many viable timeslots as there are seminars to be scheduled, the form validation will go through, but if there are no combinations of timeslots that cover the entire class, the timeslots view will still error out. Checking for this before the form goes through would require using some fancy functions like make_combinations and pull_students, and so, it seems like it might make more sense to just funnel all of the validation for this form into an AJAX request? Will have to do some more reading first.
+
+		
+		timeslots = Timeslot.objects.filter(section__pk=sec_pk)
+		viable_timeslots = []
+		for timeslot in timeslots:
+			students = timeslot.student_set.filter(section__pk=sec_pk)
+			if len(students) >= min_student_n:
+				viable_timeslots.append(timeslot)
+		if len(viable_timeslots) <= seminar_n:
+			self.add_error (None, ValidationError('Too few seminars'))
+		
 
 class SaveTimeslotCombo(forms.Form):
 	save_ts_combo = forms.BooleanField(label='Save this timeslot combination?', required=False)
@@ -382,19 +412,47 @@ class HandpickStudents(forms.Form):
 	# a fancier validation would involve making sure that the user selects students that must be in that timeslot, given the other timeslot selections, so if 
 
 class CreateSection(ModelForm):
+	WEEK_CHOICES = []
+	for i in range(10):
+		WEEK_CHOICES.append((i, i))
+	WEEK_CHOICES = WEEK_CHOICES[1:]
+	seminar_weeks = forms.MultipleChoiceField(choices=WEEK_CHOICES, widget=forms.CheckboxSelectMultiple)
+
 	def __init__(self, *args, **kwargs):
+		if 'instance' in kwargs:
+			if kwargs['instance'] is not None:
+				kwargs['initial'] = {}
+				seminar_weeks_split = kwargs['instance'].seminar_weeks.split(', ')
+				kwargs['initial']['seminar_weeks'] = seminar_weeks_split
 		super().__init__(*args, **kwargs)
-		self.fields['spreadsheet'].widget.attrs.update({'class': 'custom_file'})
+
+	
+	def clean_seminar_weeks(self):
+		sem_weeks = self.cleaned_data['seminar_weeks']
+		self.cleaned_data['seminar_weeks'] = ', '.join(sem_weeks)
+		return self.cleaned_data['seminar_weeks']
+
+	def save(self, *args, **kwargs):
+		instance = super(CreateSection, self).save(*args, **kwargs)
+		instance.seminar_weeks = self.cleaned_data['seminar_weeks']
+		instance.save()
+		return instance
+
 	class Meta:
 		model = Section
-		fields = ['name', 'year', 'quarter', 'instructor', 'class_days', 'class_start_time', 'class_end_time', 'spreadsheet']
+		fields = ['name', 'year', 'quarter', 'instructor', 'class_days', 'class_start_time', 'class_end_time', 'seminar_weeks']
 
 		widgets = {
 			'class_start_time': forms.TimeInput(attrs={'type': 'time'}),
 			'class_end_time': forms.TimeInput(attrs={'type': 'time'}),
-			'spreadsheet': forms.FileInput(attrs={'accept': 'application/csv'})
 		}
 
+class ShowSavedCombos(forms.Form):
+	def __init__(self, *args, **kwargs):
+		self.section_list = kwargs.pop('section_list')
+		super(ShowSavedCombos, self).__init__(*args, *kwargs)
 
-class DummyForm(forms.Form):
-	jelly_beans = forms.IntegerField(label='Number of jelly beans', min_value=2, max_value=15)
+		for section in self.section_list:
+			label = section.name + ' (Weeks ' + section.seminar_weeks + ')'
+			self.label_suffix = ""
+			self.fields['combos_for_sec_' + str(section.pk)] = CombinationChoiceField(label=label, queryset=Combination.objects.filter(section=section), widget=forms.CheckboxSelectMultiple)

@@ -1,47 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-	{% load static %}
-	<link rel="stylesheet" type="text/css" href="{% static 'slotter/style.css' %}">
-	<link href="https://fonts.googleapis.com/css2?family=Cabin&family=Inconsolata:wdth,wght@95,300;100,400;100,800" rel="stylesheet">
-	<title>Section Deleted!</title>
-</head>
-<body>
-<div id="header">
-	<svg id="logo" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 284.82 83.04" width="150">
-  		<defs>
-	    <style>
-	      .cls-1 {
-	        fill: #fc0;
-	      }
-	    </style>
-	  	</defs>
-	  <path d="M90.21,14.94c15.03,0,25.44,10.9,25.44,24.26s-10.37,24.21-25.53,24.21-25.27-10.85-25.27-24.21,10.37-24.26,25.36-24.26Zm.09,36.83c6.64,0,11.82-4.97,11.82-12.61s-5.23-12.52-11.87-12.52-11.82,5.01-11.82,12.52,5.32,12.61,11.87,12.61Z"/>
-	  <path d="M3.78,47.64c6.33,3.65,10.81,4.66,14.68,4.66,5.1,0,7.82-1.45,7.82-3.87-.04-2.94-3.52-3.3-11.34-5.01-5.36-1.1-14.06-3.16-14.06-13.58,0-9.32,6.64-14.94,19.6-14.94,7.12,0,13.23,1.27,19.2,4.13l-3.52,10.59c-4.75-1.93-10.15-3.69-15.29-3.69-4.53,0-6.2,1.85-6.15,3.78,0,2.24,2.46,3.12,8.61,3.96,9.62,1.71,17.89,3.78,17.89,13.84s-9.14,15.95-21.31,15.95c-7.65,0-13.01-.88-19.91-4.57l3.78-11.25Z"/>
-	  <path d="M130.97,3.78l9.76-.09v12.66h13.23v11.65h-13.23v16c0,5.67,2.81,7.12,6.46,7.12h7.6l-.09,11.12h-8.83c-10.24,0-18.68-2.77-18.68-18.11V27.99h-7.25v-10.37l6.9-2.64,4.13-11.21Z"/>
-	  <path d="M169.73,3.78l9.76-.09v12.66h13.23v11.65h-13.23v16c0,5.67,2.81,7.12,6.46,7.12h7.6l-.09,11.12h-8.83c-10.24,0-18.68-2.77-18.68-18.11V27.99h-7.25v-10.37l6.9-2.64,4.13-11.21Z"/>
-	  <path d="M213.93,44.82c1.98,4.39,6.24,7.08,11.03,7.08,5.62,0,7.87-1.45,10.46-3.47l7.38,8.09c-3.21,3.03-9.54,6.94-17.97,6.94-14.77,0-25.14-11.07-25.14-24.3s10.33-24.3,25.18-24.3c12.96,0,21.27,6.55,21.27,16,0,7.51-3.87,13.97-16.48,13.97h-15.73Zm-.18-10.99h13.71c3.56,0,5.76-1.32,5.76-3.43,0-1.98-2.55-4.35-8-4.35-5.01,0-9.49,3.08-11.47,7.78Z"/>
-	  <path d="M284.82,28.17l-5.71,.04c-7.47,0-11.91,4.22-11.91,12.52v21.18h-13.54V16.35h10.9l1.05,4.31c2.9-2.42,7.12-4.31,12.74-4.31h6.46v11.82Z"/>
-	  <path d="M55.83,39.16c0-6.59,2.54-12.6,6.93-16.98V0h-13.58V45.53c0,12.61,3.21,16.44,16.96,16.44h2.86v-1.36c-8.09-4.05-13.17-12.14-13.17-21.45Z"/>
-	  <rect class="cls-1" y="70.57" width="68.99" height="12.47" rx="3.6" ry="3.6"/>
-	</svg>
-	<div class="main_menu">
-	<div class="menu_item"><span id="active_task"><a href="/slotter/create/">create</a></span></div>
-	<div class="menu_item"><a href="/slotter/start/">schedule</a></div>
-	</div>
-	</div>
-	<div id="number_nav">
-		<div class="num_nav_item"><a href="/slotter/create/">1. create new section //</a> <a href="/slotter/edit_section/"><span id="active_step">edit section</span></a></div>
-		<hr class="nav_connector">
-		<div class="num_nav_item"><span class="step_tbd"><a href="/slotter/import/">2. import data</a></span></div>
-	</div>
-	<div id="main">
-		<div id="section_info_box">
-<p class="legend_like">Success - section deleted!</p>
-<p><strong>{{deleted_section_name}}</strong> has been deleted.</p>
-<div class="button_like"><a href="/slotter/create/">Create a new section</a></div><div class="button_like"><a href="/slotter/edit_section/">Edit a different section</a></div>
-	</div>
+{% extends "slotter/base_CREATE.html" %}
 
-</body>
-</html>
+{% block title %}
+	Section deleted!
+{% endblock %}
+
+{% block subnav %}
+	<div class="num_nav_item"><a href="/slotter/create/">1. create new section //</a> <a href="/slotter/edit_section/"><span id="active_step">edit section</span></a></div>
+	<hr class="nav_connector">
+	<div class="num_nav_item"><span class="step_tbd"><a href="/slotter/import/">2. import data</a></span></div>
+{% endblock %}
+
+{% block content %}
+<div id="section_info_box">
+	<p class="legend_like">Success - section deleted!</p>
+	<p><strong>{{deleted_section_name}}</strong> has been deleted.</p>
+	<div class="button_like"><a href="/slotter/create/">Create a new section</a></div><div class="button_like"><a href="/slotter/edit_section/">Edit a different section</a></div>
+</div>
+
+{% endblock %}

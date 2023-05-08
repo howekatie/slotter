@@ -81,6 +81,7 @@ class Student(models.Model):
 class Combination(models.Model):
     section = models.ForeignKey(Section, on_delete=models.CASCADE, default=1)
     timeslots = models.ManyToManyField(Timeslot)
+    assigned_students_breakdown = models.CharField(max_length=50, default='')
 
     class Meta:
         ordering = ['section',]
