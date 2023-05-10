@@ -728,13 +728,8 @@ def import_schedules(request):
                 chosen_section = request.session['sec']
                 section = Section.objects.get(name=chosen_section)
                 request.session['active_section'] = section.pk
-                section.spreadsheet = request.FILES['spreadsheet']
-                section.save()
-                sheet = open(section.spreadsheet.path)
-                open_sheet = csv.reader(sheet)
+                open_sheet = csv.reader(request.FILES['spreadsheet'].read().decode('utf-8').splitlines())
                 full_sheet = check_csv(open_sheet)
-                sheet_path = section.spreadsheet.path
-                section.spreadsheet.delete(save=True)
                 if isinstance(full_sheet, dict):
                     header = get_time_headers(full_sheet)
                     student_data = basic_student_data(full_sheet)
