@@ -185,6 +185,7 @@
 		const checkboxLookup = JSON.parse("{{checkbox_ns|escapejs}}");
 		const cnetLookup = JSON.parse("{{students_cnet_lookup|escapejs}}");
 		const comboStatus = {{unique_combo|escapejs}}
+		const orderedTimeslots = {{handpick_selections|escapejs}}
 
 		xhrReq();
 		hideHandpickStudents();
@@ -219,6 +220,24 @@
 				setTimeout(fadeInSaveMessage, 100);
 				setTimeout(fadeSaveBox, 1200);
 				setTimeout(popSaveBox, 1600);
+			}
+		}
+
+		function xhrCSV(csvDict) {
+			xhr = new XMLHttpRequest();
+			xhr.onreadystatechange = alertContentsCSV;
+			xhr.open("POST", "/slotter/set_csv_session_data/", true);
+			xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+			let postData = csvDict;
+			xhr.send(postData);
+		}
+
+		function alertContentsCSV() {
+			if (xhr.readyState === XMLHttpRequest.DONE) {
+				let response = xhr.responseText;
+				response = JSON.parse(response)
+				console.log('csv sent!', response);
+				window.location.href = '/slotter/write_assignments_csv/';
 			}
 		}
 
@@ -312,6 +331,7 @@
 					popSaveBox();
 				}
 				buildTables(studentAssgData, possibleCombos)
+				addCSVButtonListeners(studentAssgData, possibleCombos)
 			// xml httprequest not done yet, display loading animation
 			} else {
 				loader.style.display = "block";
@@ -357,9 +377,14 @@
 		}
 
 		function buildTables(data, combos) {
+			let outerTable = document.createElement('table')
+			outerTable.classList.add("outer_assignments_table")
+			outerTable.id = "outer_table";
 			let i = 1
 			var r, c;
 			for (let k of combos) {
+				let outerRow = outerTable.insertRow()
+				let outerCell = outerRow.insertCell(0)
 				let comboTable = document.createElement('table')
 				comboTable.classList.add("student_assgs")
 				let comboContent = data[k]
@@ -371,7 +396,8 @@
 				hr.classList.add("assg_spacer")
 				c.appendChild(hr)
 				i = i + 1
-				for (let t in comboContent) {
+				// using orderedTimeslots instead of comboContent means that the table will follow chronological order instead of the order baked into the way the original assignment data was structured
+				for (let t of orderedTimeslots) {
 					let timeslot = timeslotLookup[t]["weekday"] + ", " + timeslotLookup[t]["start_time"]
 					r = comboTable.insertRow()
 					c = r.insertCell(0)
@@ -392,7 +418,36 @@
 						}
 					}
 				}
-				mainDiv.appendChild(comboTable);
+				outerCell.appendChild(comboTable);
+				outerCell = outerRow.insertCell(1);
+				let button = document.createElement('button')
+				button.classList.add("csv_button")
+				button.id = "button_" + k;
+				let text = document.createTextNode('Get CSV')
+				button.appendChild(text)
+				outerCell.appendChild(button)
+			}
+			mainDiv.appendChild(outerTable)
+		}
+
+		function csvData(data, combo) {
+			let csvDict = {}
+			let comboData = data[combo]
+			for (let t in comboData) {
+				csvDict[t] = comboData[t]
+			}
+			csvDict = JSON.stringify(csvDict)
+			return csvDict
+		}
+
+		function addCSVButtonListeners(data, combos) {
+			for (let k of combos) {
+				csvButton = document.getElementById("button_" + k)
+				csvButton.addEventListener("click", function() {
+					let assocData = csvData(data, k)
+					console.log('assoc data', assocData)
+					xhrCSV(assocData);
+				})
 			}
 		}
 
@@ -803,9 +858,11 @@
 						newNewKeys.push(newKeys[key-1])
 					}
 					buildTables(studentAssgData, newNewKeys);
+					addCSVButtonListeners(studentAssgData, newNewKeys);
 					reshuffleButton.style.display = "inline-block";
 				} else {
 					buildTables(studentAssgData, newKeys);
+					addCSVButtonListeners(studentAssgData, newKeys);
 					reshuffleButton.style.display = "none";
 				}
 			}
@@ -847,6 +904,7 @@
 				buildHeader(currentKeys.length);
 				let newKeys = tenRandomishNumbers(currentKeys.length);
 				buildTables(studentAssgData, newKeys);
+				addCSVButtonListeners(studentAssgData, newKeys);
 				reshuffleButton.style.display = "inline-block";
 			})
 		}
@@ -897,6 +955,7 @@
 					newKeys.push(currentKeys[key-1]);
 				}
 				buildTables(studentAssgData, newKeys);
+				addCSVButtonListeners(studentAssgData, newKeys);
 			})
 		}
 
@@ -1319,6 +1378,8 @@
 			for (let table of tables) {
 				table.remove();
 			}
+			let outerTable = document.getElementById("outer_table");
+			outerTable.remove()
 		}
 
 		function clearHeader() {

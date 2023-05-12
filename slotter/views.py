@@ -32,6 +32,31 @@ def destring_int_keys(json_dict):
             restored_dict[key] = json_dict[key]
     return restored_dict
 
+def write_csv_text(csv_dict):
+    """
+    Makes the list of dicts that CSV.DictWriter will use to produce a CSV of student assignments to timeslots
+    """
+    csv_list = []
+    timeslots = []
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    # orders timeslots first
+    for time_pk in csv_dict:
+        timeslot = Timeslot.objects.get(pk=time_pk)
+        timeslots.append(timeslot)
+    timeslots = sort_timeslots(timeslots)
+    # then writes the list that the CSV writer will use
+    for t in timeslots:
+        for time_pk in csv_dict:
+            if t.pk == time_pk:
+                timeslot = Timeslot.objects.get(pk=time_pk)
+                for student_pk in csv_dict[time_pk]:
+                    student = Student.objects.get(pk=student_pk)
+                    student_row = {}
+                    student_row["Timeslot"] = '%s, %s - %s' % (weekdays[timeslot.weekday], timeslot.start_time.strftime("%-I:%M %p").lower(), timeslot.end_time.strftime("%-I:%M %p").lower())
+                    student_row["Student"] = '%s %s' % (student.first_name, student.last_name)
+                    csv_list.append(student_row)
+    return csv_list
+
 # calendar stuff
 
 def find_thanksgiving(year):
@@ -520,6 +545,7 @@ def timeslots(request):
     }
     return HttpResponse(template.render(context, request))
 
+@ensure_csrf_cookie
 def assign_students(request):
     save_combo_form = SaveTimeslotCombo
     passed_section = request.session.get('section')
@@ -545,6 +571,7 @@ def assign_students(request):
     # form stuff
 
     timeslot_list = make_selected_timeslots_list(form_data)
+    timeslot_list.sort()
     timeslot_list_dj = make_selected_timeslots_list_dj(form_data)
     just_selected_timeslots = get_just_selected_timeslots(timeslot_list_dj)
     timeslots_dj = Timeslot.objects.filter(section__name=sec_name)
@@ -609,6 +636,7 @@ def assign_students(request):
         'students_cnet_lookup': students_cnet_lookup,
         'save_combo_form': save_combo_form,
         'unique_combo': unique_combo,
+        'handpick_selections': handpick_selections,
     }
     return HttpResponse(template.render(context, request))
 
@@ -679,6 +707,15 @@ def set_timeslot_session_data(request):
         response = JsonResponse(dict_response)
         return response
 
+def set_csv_session_data(request):
+    csv_data = load(request)
+    if csv_data != None or csv_data != '':
+        request.session['csv_data'] = csv_data
+        dict_response = {}
+        dict_response['csv_data'] = csv_data
+        response = JsonResponse(dict_response)
+        return response
+
 def assignment_churn(request):
     passed_section = request.session.get('section')
     passed_min_students = request.session.get('min_students')
@@ -711,7 +748,6 @@ def assignment_churn(request):
     working_combos = pull_students(avail, all_time_combos, class_list)
     combos = student_combos_for_selected_timeslots(timeslot_list, avail)
     sorted_timeslot_list = sort_timeslots_by_length(timeslot_list, avail)
-    test_ten = True
     working = working_student_combos(sorted_timeslot_list, combos, passed_ten)
     assignments = make_assignments(working, combos)
     dj_assignments_test = convert_assgs_pk(assignments, class_list_dj, timeslots_dj)
@@ -824,3 +860,19 @@ def csv_guidelines(request):
     context = {}
     template = loader.get_template('slotter/csv_guidelines.html')
     return HttpResponse(template.render(context, request))
+
+def write_assignments_csv(request):
+    json_csv_data = destring_int_keys(request.session.get('csv_data'))
+    csv_list = write_csv_text(json_csv_data)
+    sec_pk = request.session.get('section_pk')
+    section = Section.objects.get(pk=sec_pk)
+    response = HttpResponse(
+        content_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="%s Meeting Assignments.csv"' % section },
+    )
+    fieldnames = ['Timeslot', 'Student']
+    writer = csv.DictWriter(response, fieldnames=fieldnames)
+    writer.writeheader()
+    for entry in csv_list:
+        writer.writerow(entry)
+    return response

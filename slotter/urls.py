@@ -22,6 +22,8 @@ urlpatterns = [
     path('set_timeslot_session_data/', views.set_timeslot_session_data, name='set_timeslot_session_data'),
     path('delete_timeslot_combo/', views.delete_timeslot_combo, name='delete_timeslot_combo'),
     path('csv_guidelines/', views.csv_guidelines, name='csv_guidelines'),
+    path('write_assignments_csv/', views.write_assignments_csv, name='write_assignments_csv'),
+    path('set_csv_session_data/', views.set_csv_session_data, name='set_csv_session_data'),
     ]
 
 urlpatterns += staticfiles_urlpatterns()

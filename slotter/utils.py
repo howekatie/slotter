@@ -505,6 +505,28 @@ def combo_lookup_dict_pk(pk_lookup_dict, pk_working_combos):
 
 # pulling and processing form data submitted from the timeslots view
 
+def timeslot_in_minutes(timeslot):
+    """
+    Converts a Timeslot object into minutes, assuming that Monday at midnight == 0 minutes. Used to sort Timeslot objects that aren't just being called through a query.
+    """
+    return timeslot.weekday * 24 * 60 + in_minutes(timeslot.start_time)
+
+def sort_timeslots(timeslot_list):
+    """
+    Returns a list of Timeslot objects sorted by weekday, time. Current use is ensuring that saved timeslot combinations are listed in the right order instead of in the order the timeslots were selected.
+    """
+    timeslot_minute_list = []
+    for timeslot in timeslot_list:
+        timeslot_int = timeslot_in_minutes(timeslot)
+        timeslot_minute_list.append(timeslot_int)
+    timeslot_minute_list.sort()
+    sorted_timeslots = []
+    for time in timeslot_minute_list:
+        for timeslot in timeslot_list:
+            if time == timeslot_in_minutes(timeslot):
+                sorted_timeslots.append(timeslot)
+    return sorted_timeslots
+
 def make_selected_timeslots_list(form_data):
     """
     Form data is a list of tuples, where the first tuple is the pk of a Timeslot object, and the second is the number of students who are to be assigned to that timeslot (corresponds to the pair of form fields in the timeslots form). This function returns the same list just with a (day, datetime.time) instead of the pk for the first of each tuple value.
@@ -524,11 +546,16 @@ def make_selected_timeslots_list_dj(form_data):
     Same list containing form data from the timeslots view, only the first tuple value is now a Timeslot object instead of the regular Python datetime.time.
     """
     timeslots_list = []
+    just_timeslots = []
     for selection in form_data:
         timeslot = Timeslot.objects.get(pk=selection[0])
-        assign_n_students = selection[1]
-        new_selection = (timeslot, assign_n_students)
-        timeslots_list.append(new_selection)
+        just_timeslots.append(timeslot)
+    just_timeslots = sort_timeslots(just_timeslots)
+    for t in just_timeslots:
+        for selection in form_data:
+            if t.pk == selection[0]:
+                new_selection = (t, selection[1])
+                timeslots_list.append(new_selection)
     return timeslots_list
 
 def get_just_selected_timeslots(timeslots_list):
@@ -1004,28 +1031,6 @@ def combination_timeslot_assgned_students_lookup(section):
     for combo in combos:
         lookup_dict[combo.pk] = combo.assigned_students_breakdown
     return lookup_dict
-
-def timeslot_in_minutes(timeslot):
-    """
-    Converts a Timeslot object into minutes, assuming that Monday at midnight == 0 minutes. Used to sort Timeslot objects that aren't just being called through a query.
-    """
-    return timeslot.weekday * 24 * 60 + in_minutes(timeslot.start_time)
-
-def sort_timeslots(timeslot_list):
-    """
-    Returns a list of Timeslot objects sorted by weekday, time. Current use is ensuring that saved timeslot combinations are listed in the right order instead of in the order the timeslots were selected.
-    """
-    timeslot_minute_list = []
-    for timeslot in timeslot_list:
-        timeslot_int = timeslot_in_minutes(timeslot)
-        timeslot_minute_list.append(timeslot_int)
-    timeslot_minute_list.sort()
-    sorted_timeslots = []
-    for time in timeslot_minute_list:
-        for timeslot in timeslot_list:
-            if time == timeslot_in_minutes(timeslot):
-                sorted_timeslots.append(timeslot)
-    return sorted_timeslots
 
 def label_combo_by_timeslots(combo):
     """

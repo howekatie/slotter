@@ -697,6 +697,15 @@ table.group_or_avoid td {
 	margin-top: 0;
 }
 
+table.outer_assignments_table {
+	border: 0;
+	border-collapse: collapse;
+}
+
+table.outer_assignments_table td {
+	border: 0;
+}
+
 table.student_assgs {
 	border: 0;
 	border-collapse: collapse;
@@ -1094,6 +1103,10 @@ button.calendar_nav_disabled {
 	padding: 3px 8px 3px 8px;
 	font-size: 0.9em;
 	opacity: 50%;
+}
+
+button.csv_button {
+	margin: 2.5em 0 0 1em;
 }
 
 #form_wrapper {
