@@ -10,7 +10,7 @@ from django.core.files.storage import FileSystemStorage
 from django import forms
 
 from .models import Student, Timeslot, Section, Combination
-from .utils import get_students_from_time, get_availabilities, make_class_list, make_combinations, pull_students, will_combo_together, convert_to_timeslot_object, convert_timeslot_list_to_objects, convert_timeslots_in_dict_to_objects, in_minutes, in_hours_and_minutes, timetable_range, timetable, find_rowspans, determine_timeslot_duration, timetable_with_rowspans, write_out_n, availabilities_by_timeslot, student_availability, any_required_timeslots, least_available_students, reverse_keys_and_vals, recommended_pairings, timeslot_choice_field, add_blank_field, working_combos_django, working_combos_pk, combo_lookup_dict_pk, student_cap_by_timeslot, make_selected_timeslots_list, make_selected_timeslots_list_dj, get_just_selected_timeslots, selected_timeslots_for_json, students_for_json, students_cnet_to_pk, selected_avail_dict, convert_to_student_object, convert_avail_dict, student_choice_field, student_choices_by_timeslot, tally_student_availability, make_pronoun_choices, make_student_combinations, student_combos_for_selected_timeslots, sort_timeslots_by_length, no_overlap, gut_options, gut_options_final, gut_for_all_times, working_student_combos, make_assignments, convert_assgs_pk, checkbox_count, display_students, matches_existing_combo, unique_timeslot_combo, stringify_assigned_student_numbers, destring_student_breakdown, combination_timeslot_assgned_students_lookup, timeslot_in_minutes, sort_timeslots, label_combo_by_timeslots, combo_dicts_for_display, define_week, define_quarter, find_date_by_week, fix_timeslots_by_week, convert_to_pyth_time, convert_list_to_pyth_time, find_week_in_quarter, any_timeslot_conflicts, quarter_table, multiple_section_timeslots_by_week, full_quarter_schedule, timeslots_for_quarter_by_date, conflicts_full_quarter, conflicts_integrated, get_chosen_combos, seminars_by_week, active_week_combos, find_first_active_week, make_combo_label, label_combos, basic_student_data, full_spreadsheet, get_time_headers, mine_timeslot, mine_timeslots, mine_student_availability, get_earliest_start, get_latest_end, get_timeslot_column, timeslot_durations, add_student, add_students, add_timeslot, add_timeslots, student_avail_starts, save_students, save_timeslots, add_timeslots_to_students, provisional_timetable, timeslot_pk_lookup_dict, all_combos_for_quarter, combination_lookup, check_csv
+from .utils import get_students_from_time, get_availabilities, make_class_list, make_combinations, pull_students, will_combo_together, convert_to_timeslot_object, convert_timeslot_list_to_objects, convert_timeslots_in_dict_to_objects, in_minutes, in_hours_and_minutes, timetable_range, timetable, find_rowspans, determine_timeslot_duration, timetable_with_rowspans, write_out_n, availabilities_by_timeslot, student_availability, any_required_timeslots, least_available_students, reverse_keys_and_vals, recommended_pairings, timeslot_choice_field, add_blank_field, working_combos_django, working_combos_pk, combo_lookup_dict_pk, student_cap_by_timeslot, make_selected_timeslots_list, make_selected_timeslots_list_dj, get_just_selected_timeslots, selected_timeslots_for_json, students_for_json, students_cnet_to_pk, selected_avail_dict, convert_to_student_object, convert_avail_dict, student_choice_field, student_choices_by_timeslot, tally_student_availability, make_pronoun_choices, make_student_combinations, student_combos_for_selected_timeslots, sort_timeslots_by_length, no_overlap, gut_options, gut_options_final, gut_for_all_times, working_student_combos, make_assignments, convert_assgs_pk, checkbox_count, display_students, matches_existing_combo, unique_timeslot_combo, stringify_assigned_student_numbers, destring_student_breakdown, combination_timeslot_assgned_students_lookup, timeslot_in_minutes, sort_timeslots, label_combo_by_timeslots, combo_dicts_for_display, define_week, define_quarter, find_date_by_week, fix_timeslots_by_week, convert_to_pyth_time, convert_list_to_pyth_time, find_week_in_quarter, any_timeslot_conflicts, quarter_table, multiple_section_timeslots_by_week, full_quarter_schedule, timeslots_for_quarter_by_date, conflicts_full_quarter, conflicts_integrated, get_chosen_combos, seminars_by_week, active_week_combos, find_first_active_week, basic_student_data, full_spreadsheet, get_time_headers, mine_timeslot, mine_timeslots, mine_student_availability, get_earliest_start, get_latest_end, get_timeslot_column, timeslot_durations, add_student, add_students, add_timeslot, add_timeslots, student_avail_starts, save_students, save_timeslots, add_timeslots_to_students, provisional_timetable, timeslot_pk_lookup_dict, all_combos_for_quarter, combination_lookup, check_csv, destring_int_keys, write_csv_text, find_thanksgiving, fall_first_monday, winter_first_monday, spring_first_monday, summer_first_monday, set_first_monday, json_time, json_time_dict, json_week_by_week_cal, combo_count_by_section, sections_meeting_same_week, saved_timeslot_combinations_lookup, combo_count_overlapping_weeks, natural_sort, sorted_section_choices
 from .forms import SelectTimeslots, InitialSetup, HandpickByTimeslot, HandpickStudents, RefineAssignments, ChooseSection, SaveTimeslotCombo, CalendarViews, JumpWeek, ChooseQuarter, ImportSectionCSV, ConfirmCSVImport, CreateSection, ShowSavedCombos
 from datetime import time, date, datetime, timedelta
 
@@ -18,171 +18,7 @@ from random import choice
 
 import csv
 
-from json import dumps, load, loads
-
-def destring_int_keys(json_dict):
-    """
-    Fixes a dict that has been through JSON.dumps and then JSON.loads by making what should be int keys back into ints
-    """
-    restored_dict = {}
-    for key in json_dict:
-        if key.isnumeric():
-            restored_dict[int(key)] = json_dict[key]
-        else:
-            restored_dict[key] = json_dict[key]
-    return restored_dict
-
-def write_csv_text(csv_dict):
-    """
-    Makes the list of dicts that CSV.DictWriter will use to produce a CSV of student assignments to timeslots
-    """
-    csv_list = []
-    timeslots = []
-    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    # orders timeslots first
-    for time_pk in csv_dict:
-        timeslot = Timeslot.objects.get(pk=time_pk)
-        timeslots.append(timeslot)
-    timeslots = sort_timeslots(timeslots)
-    # then writes the list that the CSV writer will use
-    for t in timeslots:
-        for time_pk in csv_dict:
-            if t.pk == time_pk:
-                timeslot = Timeslot.objects.get(pk=time_pk)
-                for student_pk in csv_dict[time_pk]:
-                    student = Student.objects.get(pk=student_pk)
-                    student_row = {}
-                    student_row["Timeslot"] = '%s, %s - %s' % (weekdays[timeslot.weekday], timeslot.start_time.strftime("%-I:%M %p").lower(), timeslot.end_time.strftime("%-I:%M %p").lower())
-                    student_row["Student"] = '%s %s' % (student.first_name, student.last_name)
-                    csv_list.append(student_row)
-    return csv_list
-
-# calendar stuff
-
-def find_thanksgiving(year):
-    nov_first = date(year, 11, 1).weekday()
-    difference = 3 - nov_first
-    if nov_first < 4:
-        thanksgiving = 22 + difference
-    elif nov_first >= 4:
-        thanksgiving = 29 + difference
-    return date(year, 11, thanksgiving)
-
-def fall_first_monday(year):
-    nov_first = date(year,11,1).weekday()
-    if nov_first < 4:
-        difference = 3 - nov_first
-        thanksgiving = 22 + difference
-    elif nov_first >= 4:
-        difference = 3 - nov_first
-        thanksgiving = difference + 29
-    first_thur = date(year,11,thanksgiving) - timedelta(days=(8*7))
-    first_mon = first_thur - timedelta(days=3)
-    return first_mon
-
-def winter_first_monday(year):
-    jan_first = date(year,1,1).weekday()
-    if jan_first == 0:
-        first_mon = date(year,1,1)
-    elif jan_first == 6:
-        first_mon = date(year,1,1) + timedelta(days=1)
-    elif jan_first > 0:
-        weekday_difference = 0 - jan_first
-        difference = weekday_difference + 7
-        first_mon = date(year,1,1) + timedelta(difference)
-    return first_mon
-
-def spring_first_monday(year):
-    winter_first_mon = winter_first_monday(year)
-    first_mon = winter_first_mon + timedelta(11*7)
-    return first_mon
-
-def summer_first_monday(year):
-    spring_first_mon = spring_first_monday(year)
-    spring_last_mon = spring_first_mon + timedelta(11*7)
-    convocation = spring_last_mon + timedelta(5)
-    first_mon = convocation + timedelta(9)
-    return first_mon
-
-def set_first_monday(year, quarter):
-    if quarter == 1:
-        return fall_first_monday(year)
-    elif quarter == 2:
-        return winter_first_monday(year)
-    elif quarter == 3:
-        return spring_first_monday(year)
-    elif quarter == 0:
-        return summer_first_monday
-
-def json_time(time):
-    if isinstance(time, (datetime, date)):
-        return str(time.year) + "-" + str(time.month) + '-' + str(time.day)
-
-def json_time_dict(time_dict):
-    json_dict = {}
-    for key in time_dict:
-        for time in time_dict[key]:
-            new_time = json_time(time)
-            empty_list = []
-            json_dict[new_time] = empty_list
-    return json_dict
-
-def json_week_by_week_cal(quarter_cal):
-    json_dict = {}
-    for week in quarter_cal:
-        json_week = []
-        for time in quarter_cal[week]:
-            json_week.append(json_time(time))
-        json_dict[week] = json_week
-    return json_dict
-
-def combo_count_by_section(sections):
-    section_list = []
-    for section in sections:
-        if section.combination_set.all().count() > 0:
-            section_dict = {}
-            section_dict['pk'] = section.pk
-            section_dict['count'] = section.combination_set.all().count()
-            section_dict['name'] = section.name
-            section_list.append(section_dict)
-    return section_list
-
-def sections_meeting_same_week(section):
-    """
-    Lists sections (from the same year/quarter) that have seminars that meet in the same week for at least one week of the quarter
-    """
-    quarter = section.quarter
-    year = section.year
-    weeks = section.seminar_weeks.split(', ')
-    same_quarter_secs = Section.objects.filter(quarter=quarter, year=year).exclude(pk=section.pk)
-    same_week_secs = []
-    for sec in same_quarter_secs:
-        sec_weeks = sec.seminar_weeks.split(', ')
-        for week in sec_weeks:
-            if week in weeks and sec not in same_week_secs:
-                if sec.combination_set.all().count() > 0:
-                    same_week_secs.append(sec)
-    return same_week_secs
-
-def saved_timeslot_combinations_lookup(same_week_secs):
-    combination_lookup = {}
-    for sec in same_week_secs:
-        combinations = sec.combination_set.all()
-        for combo in combinations:
-            timeslot_list = []
-            timeslots = combo.timeslots.all()
-            for timeslot in timeslots:
-                timeslot_list.append(timeslot.pk)
-            combination_lookup[combo.pk] = timeslot_list
-    return combination_lookup
-
-def combo_count_overlapping_weeks(same_week_secs):
-    section_dict = {}
-    for sec in same_week_secs:
-        section_dict[sec.pk] = sec.combination_set.all().count()
-    return section_dict
-
-# the actual views    
+from json import dumps, load, loads  
 
 def index(request):
     return render(request, 'slotter/index.html', {})
@@ -201,11 +37,12 @@ def page_not_found(request, exception):
 
 @ensure_csrf_cookie
 def start(request):
-    form1 = ChooseSection()
+    section_choices = sorted_section_choices()
+    form1 = ChooseSection(section_choices=section_choices)
     active_section = request.session.get('active_section')
     if request.method == 'POST':
         if request.POST.get('section'):
-            form1 = ChooseSection(request.POST or None)
+            form1 = ChooseSection(request.POST or None, section_choices=section_choices)
             chosen_section_pk = int(request.POST['section'])
             sec = Section.objects.get(pk=chosen_section_pk)
             chosen_section = Section.objects.get(pk=chosen_section_pk).name
@@ -297,11 +134,12 @@ def create_section(request):
     return HttpResponse(template.render(context, request))
 
 def edit_section(request):
-    form0 = ChooseSection()
+    section_choices = sorted_section_choices()
+    form0 = ChooseSection(section_choices=section_choices)
     active_section_pk = request.session.get('active_section')
     if request.method == 'POST':
         if request.POST.get('section'):
-            form0 = ChooseSection(request.POST)
+            form0 = ChooseSection(request.POST, section_choices=section_choices)
             sec_pk = int(request.POST['section'])
             active_section = Section.objects.get(pk=sec_pk)
             request.session['active_section'] = sec_pk
@@ -756,14 +594,14 @@ def assignment_churn(request):
     return response
 
 def import_schedules(request):
+    section_choices = sorted_section_choices()
     if request.method == 'POST':
         if request.POST.get('section'):
-            form = ImportSectionCSV(request.POST, request.FILES)
+            form = ImportSectionCSV(request.POST, request.FILES, section_choices=section_choices)
             if form.is_valid():
-                request.session['sec'] = request.POST['section']
-                chosen_section = request.session['sec']
-                section = Section.objects.get(name=chosen_section)
-                request.session['active_section'] = section.pk
+                chosen_section = request.POST['section']
+                section = Section.objects.get(pk=chosen_section)
+                request.session['active_section'] = chosen_section
                 open_sheet = csv.reader(request.FILES['spreadsheet'].read().decode('utf-8').splitlines())
                 full_sheet = check_csv(open_sheet)
                 if isinstance(full_sheet, dict):
@@ -847,9 +685,9 @@ def import_schedules(request):
     else:
         if request.session.get('active_section') != None:
             active_section_pk = request.session.get('active_section')
-            form = ImportSectionCSV(initial={'section': Section.objects.get(pk=active_section_pk)})
+            form = ImportSectionCSV(initial={'section': active_section_pk}, section_choices=section_choices)
         else:
-            form = ImportSectionCSV()
+            form = ImportSectionCSV(section_choices=section_choices)
     template = loader.get_template('slotter/import_schedules.html')
     context = {
         'form': form,

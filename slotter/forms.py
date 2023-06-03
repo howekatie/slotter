@@ -111,8 +111,11 @@ class SelectTimeslots(forms.Form):
 		return cleaned_data
 
 class ImportSectionCSV(forms.Form):
-	section = forms.ModelChoiceField(label='Section', queryset=Section.objects.all(), to_field_name='name')
-	spreadsheet = forms.FileField(label='Spreadsheet', widget=forms.FileInput(), validators=[FileExtensionValidator(allowed_extensions=['csv']), file_size])
+	def __init__(self, *args, **kwargs):
+		self.section_choices = kwargs.pop("section_choices")
+		super(ImportSectionCSV, self).__init__(*args, **kwargs)
+		self.fields["section"] = forms.ChoiceField(choices=self.section_choices, label='Section')
+		self.fields["spreadsheet"] = forms.FileField(label='Spreadsheet', widget=forms.FileInput(), validators=[FileExtensionValidator(allowed_extensions=['csv']), file_size])
 
 class ConfirmCSVImport(forms.Form):
 	def __init__(self, *args, **kwargs):
@@ -124,7 +127,10 @@ class ConfirmCSVImport(forms.Form):
 			self.fields["confirm_delete"] = forms.BooleanField(label='Clear existing data and proceed with import?')
 
 class ChooseSection(forms.Form):
-	section = forms.ModelChoiceField(label='Section', queryset=Section.objects.all())
+	def __init__(self, *args, **kwargs):
+		self.section_choices = kwargs.pop("section_choices")
+		super(ChooseSection, self).__init__(*args, **kwargs)
+		self.fields["section"] = forms.ChoiceField(choices=self.section_choices, label='Section')
 
 class ChooseQuarter(forms.Form):
 	

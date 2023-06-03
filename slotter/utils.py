@@ -501,6 +501,47 @@ def combo_lookup_dict_pk(pk_lookup_dict, pk_working_combos):
         combo_dict[pk] = combo_list
     return combo_dict
 
+def sections_meeting_same_week(section):
+    """
+    Lists sections (from the same year/quarter) that have seminars that meet in the same week for at least one week of the quarter. Used in one of the secondary forms for selecting timeslots.
+    """
+    quarter = section.quarter
+    year = section.year
+    weeks = section.seminar_weeks.split(', ')
+    same_quarter_secs = Section.objects.filter(quarter=quarter, year=year).exclude(pk=section.pk)
+    same_week_secs = []
+    for sec in same_quarter_secs:
+        sec_weeks = sec.seminar_weeks.split(', ')
+        for week in sec_weeks:
+            if week in weeks and sec not in same_week_secs:
+                if sec.combination_set.all().count() > 0:
+                    same_week_secs.append(sec)
+    return same_week_secs
+
+def saved_timeslot_combinations_lookup(same_week_secs):
+    """
+    Makes a dict of all the saved timeslot combinations from other sections that meet in the same week, where each key is a combo pk and the corresponding value is a list of the timeslots that make up that combo. For JSON serialization.
+    """
+    combination_lookup = {}
+    for sec in same_week_secs:
+        combinations = sec.combination_set.all()
+        for combo in combinations:
+            timeslot_list = []
+            timeslots = combo.timeslots.all()
+            for timeslot in timeslots:
+                timeslot_list.append(timeslot.pk)
+            combination_lookup[combo.pk] = timeslot_list
+    return combination_lookup
+
+def combo_count_overlapping_weeks(same_week_secs):
+    """
+    Makes a dict where each key is a section that meets in the same week as the active section and the corresponding value is the number of saved timeslot combos for that section. For JSON serialization. Used to set up the event listeners on the checkboxes that highlight other saved combos.
+    """
+    section_dict = {}
+    for sec in same_week_secs:
+        section_dict[sec.pk] = sec.combination_set.all().count()
+    return section_dict
+
 # ASSIGNING STUDENTS
 
 # pulling and processing form data submitted from the timeslots view
@@ -974,6 +1015,33 @@ def checkbox_count(timeslot_list_dj, selected_avail, tally_student_avail):
         n = n + 1
     return checkbox_count_by_field
 
+# CSV WRITING (appears in the assign_students view)
+
+def write_csv_text(csv_dict):
+    """
+    Makes the list of dicts that CSV.DictWriter will use to produce a CSV of student assignments to timeslots
+    """
+    csv_list = []
+    timeslots = []
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    # orders timeslots first
+    for time_pk in csv_dict:
+        timeslot = Timeslot.objects.get(pk=time_pk)
+        timeslots.append(timeslot)
+    timeslots = sort_timeslots(timeslots)
+    # then writes the list that the CSV writer will use
+    for t in timeslots:
+        for time_pk in csv_dict:
+            if t.pk == time_pk:
+                timeslot = Timeslot.objects.get(pk=time_pk)
+                for student_pk in csv_dict[time_pk]:
+                    student = Student.objects.get(pk=student_pk)
+                    student_row = {}
+                    student_row["Timeslot"] = '%s, %s - %s' % (weekdays[timeslot.weekday], timeslot.start_time.strftime("%-I:%M %p").lower(), timeslot.end_time.strftime("%-I:%M %p").lower())
+                    student_row["Student"] = '%s %s' % (student.first_name, student.last_name)
+                    csv_list.append(student_row)
+    return csv_list
+
 # SAVING TIMESLOT COMBINATIONS (connected to the assign_students view but also the start view)
 
 def matches_existing_combo(combo, timeslots):
@@ -1061,6 +1129,27 @@ def combo_dicts_for_display(combo_list):
     return dict_list
 
 # CHOOSING A SECTION
+
+def natural_sort(some_list, index=None):
+    """
+    Sorts lists in the way that a human would actually want them to be sorted. E.g. 3 cats, 4 badgers, 12 finches. Optional argument is for when list items are not just strings and when sorting should be done in accordance with a constituent string, e.g. [(1, '12 finches'), (5, '3 cats')].
+    """
+    convert_if_int = lambda chunk : int(chunk) if chunk.isnumeric() else chunk
+    if index == None:
+        alphanum_key = lambda string : [ convert_if_int(chunk) for chunk in re.split('([0-9]+)', string) ]
+    else:
+        alphanum_key = lambda item : [ convert_if_int(chunk) for chunk in re.split('([0-9]+)', item[index]) ]
+    return sorted(some_list, key=alphanum_key)
+
+def sorted_section_choices():
+    """
+    Returns a properly sorted list of Section tuples (section.pk, section.name) for dropdown selections in forms.
+    """
+    sections = Section.objects.all()
+    section_tuples = [ (section.pk, section.name) for section in sections ]
+    section_tuples = natural_sort(section_tuples, index=1)
+    section_tuples = add_blank_field(section_tuples)
+    return section_tuples
 
 def display_students(class_list_dj):
     """
@@ -1435,7 +1524,19 @@ def add_timeslots_to_students(student_avail):
             timeslot_obj = Timeslot.objects.filter(weekday=time[0], start_time=time[1], end_time=time[2])[0]
             student_obj.timeslots.add(timeslot_obj)
 
-# TESTS
+def destring_int_keys(json_dict):
+    """
+    Fixes a dict that has been through JSON.dumps and then JSON.loads by making what should be int keys back into ints
+    """
+    restored_dict = {}
+    for key in json_dict:
+        if key.isnumeric():
+            restored_dict[int(key)] = json_dict[key]
+        else:
+            restored_dict[key] = json_dict[key]
+    return restored_dict
+
+# CALENDAR
 
 def define_week(start):
     """
@@ -1679,23 +1780,103 @@ def find_first_active_week(week_by_week):
     active_weeks.sort()
     return active_weeks[0]
 
-def make_combo_label(combo):
+def find_thanksgiving(year):
     """
-    Doesn't look like this is currently in use
+    Finds Thanksgiving for a given year. Used to determine the date for the first Monday of Fall Quarter.
     """
-    timeslot_list = combo.timeslots.all()
-    new_timeslot_list = []
-    for time in timeslot_list:
-        new = time.get_weekday_display() + ' ' + time.start_time.strftime("%-I:%M %p")
-        new_timeslot_list.append(new)
-    delimiter = ', '
-    timeslot_string = delimiter.join(new_timeslot_list)
-    return f'{combo.section} - {timeslot_string}'
+    nov_first = date(year, 11, 1).weekday()
+    difference = 3 - nov_first
+    if nov_first < 4:
+        thanksgiving = 22 + difference
+    elif nov_first >= 4:
+        thanksgiving = 29 + difference
+    return date(year, 11, thanksgiving)
 
-def label_combos(combos):
-    display_list = []
-    for combo in combos:
-        display = make_combo_label(combo)
-        display_list.append(display)
-    display_list.sort()
-    return display_list
+def fall_first_monday(year):
+    """
+    Determines the date for the first Monday of Fall Quarter.
+    """
+    thanksgiving = find_thanksgiving(year)
+    first_thur = thanksgiving - timedelta(days=(8*7))
+    first_mon = first_thur - timedelta(days=3)
+    return first_mon
+
+def winter_first_monday(year):
+    jan_first = date(year,1,1).weekday()
+    if jan_first == 0:
+        first_mon = date(year,1,1)
+    elif jan_first == 6:
+        first_mon = date(year,1,1) + timedelta(days=1)
+    elif jan_first > 0:
+        weekday_difference = 0 - jan_first
+        difference = weekday_difference + 7
+        first_mon = date(year,1,1) + timedelta(difference)
+    return first_mon
+
+def spring_first_monday(year):
+    winter_first_mon = winter_first_monday(year)
+    first_mon = winter_first_mon + timedelta(11*7)
+    return first_mon
+
+def summer_first_monday(year):
+    spring_first_mon = spring_first_monday(year)
+    spring_last_mon = spring_first_mon + timedelta(11*7)
+    convocation = spring_last_mon + timedelta(5)
+    first_mon = convocati
+
+def set_first_monday(year, quarter):
+    """
+    Determines the date of the first Monday to appear in calendar mode for the selected year/quarter
+    """
+    if quarter == 1:
+        return fall_first_monday(year)
+    elif quarter == 2:
+        return winter_first_monday(year)
+    elif quarter == 3:
+        return spring_first_monday(year)
+    elif quarter == 0:
+        return summer_first_monday
+
+def json_time(time):
+    """
+    Converts a Python DateTime into a string for JSON serialization.
+    """
+    if isinstance(time, (datetime, date)):
+        return str(time.year) + "-" + str(time.month) + '-' + str(time.day)
+
+def json_time_dict(quarter_dict):
+    """
+    Used to make a dict of all the DateTimes that will appear in the quarterly calendar for a given year/quarter. For JSON serialization.
+    """
+    json_dict = {}
+    for key in quarter_dict:
+        for time in quarter_dict[key]:
+            new_time = json_time(time)
+            json_dict[new_time] = []
+    return json_dict
+
+def json_week_by_week_cal(quarter_cal):
+    """
+    Used to make a dict of all the DateTimes for the quarterly calendar but where the keys are a week in the quarter (an int) and the values are a list of the dates that appear in that week. For JSON serialization.
+    """
+    json_dict = {}
+    for week in quarter_cal:
+        json_week = []
+        for time in quarter_cal[week]:
+            json_week.append(json_time(time))
+        json_dict[week] = json_week
+    return json_dict
+
+def combo_count_by_section(sections):
+    """
+    List of dicts -- one for each saved combination for sections that meet in the same quarter. For JSON serialization. Used to set up event listeners, etc. for checkboxes that select timeslot combinations to be displayed in the calendar.
+    """
+    section_list = []
+    for section in sections:
+        if section.combination_set.all().count() > 0:
+            section_dict = {}
+            section_dict['pk'] = section.pk
+            section_dict['count'] = section.combination_set.all().count()
+            section_dict['name'] = section.name
+            section_list.append(section_dict)
+    return section_list
