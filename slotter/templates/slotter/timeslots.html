@@ -54,7 +54,7 @@
 		</thead>
 		{% for k, v in table.items %}
 		<tr>
-			<td>{{k|lower}}</td>
+			<td id="t-{{k|last}}">{{k|first|lower}}</td>
 			{% for i in v %}
 				{% if i == None %}
 				<td></td>
@@ -150,7 +150,9 @@
 			for (let x in timeslotLookup) {
 				selectable.push(Number(x));
 				allTimeslots.push(Number(x));
-				selectOnClick(x, n);
+				selectOnClick(x, n); // adds click event handler to each timeslot button
+				highlightRange(x); // adds mouseover event handler to each timeslot button
+				removeHighlight(x); // adds mouseout event handler to each timeslot button
 			}
 			const comboLookup = JSON.parse("{{json_dump2|escapejs}}")
 
@@ -161,6 +163,10 @@
 			}
 
 			selectFromDropdown(n)
+
+
+			const timeslotRanges = JSON.parse("{{timeslot_ranges|escapejs}}")
+			console.log(timeslotRanges)
 
 			const savedComboLookup = JSON.parse("{{saved_combo_lookup|escapejs}}")
 			const savedComboCount = JSON.parse("{{saved_combo_count|escapejs}}")
@@ -359,6 +365,36 @@
 						}
 					}
 				}
+			}
+
+			function highlightRange(ts_id) {
+				/* when the cursor hovers over a timeslot button, this function looks up the ids of the <td> tags that correspond with the times included in the timeslot's range and highlights them for easier readability
+				*/
+				document.getElementById(ts_id).addEventListener('mouseover', () => {
+					for (let time of timeslotRanges) {
+						if (time["timeslot"] === Number(ts_id)) {
+							for (let id of time["range"]) {
+								let colTime = document.getElementById("t-" + id.toString())
+								colTime.style.color = "#f7512b"
+							}
+						}
+					}
+				})
+			}
+
+			function removeHighlight(ts_id) {
+				/* when the cursor moves away from a timeslot button, the corresponding times in the table's time column are no longer highlighted
+				*/
+				document.getElementById(ts_id).addEventListener('mouseout', () => {
+					for (let time of timeslotRanges) {
+						if (time["timeslot"] === Number(ts_id)) {
+							for (let id of time["range"]) {
+								let colTime = document.getElementById("t-" + id.toString())
+								colTime.style.color = "#000000"
+							}
+						}
+					}
+				})
 			}
 
 			function selectOnClick(ts_id, n) {

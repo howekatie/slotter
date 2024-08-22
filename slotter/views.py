@@ -10,7 +10,7 @@ from django.core.files.storage import FileSystemStorage
 from django import forms
 
 from .models import Student, Timeslot, Section, Combination
-from .utils import get_students_from_time, get_availabilities, make_class_list, make_combinations, pull_students, will_combo_together, convert_to_timeslot_object, convert_timeslot_list_to_objects, convert_timeslots_in_dict_to_objects, in_minutes, in_hours_and_minutes, timetable_range, timetable, find_rowspans, determine_timeslot_duration, timetable_with_rowspans, write_out_n, availabilities_by_timeslot, student_availability, any_required_timeslots, least_available_students, reverse_keys_and_vals, recommended_pairings, timeslot_choice_field, add_blank_field, working_combos_django, working_combos_pk, combo_lookup_dict_pk, student_cap_by_timeslot, make_selected_timeslots_list, make_selected_timeslots_list_dj, get_just_selected_timeslots, selected_timeslots_for_json, students_for_json, students_cnet_to_pk, selected_avail_dict, convert_to_student_object, convert_avail_dict, student_choice_field, student_choices_by_timeslot, tally_student_availability, make_pronoun_choices, make_student_combinations, student_combos_for_selected_timeslots, sort_timeslots_by_length, no_overlap, gut_options, gut_options_final, gut_for_all_times, working_student_combos, make_assignments, convert_assgs_pk, checkbox_count, display_students, matches_existing_combo, unique_timeslot_combo, stringify_assigned_student_numbers, destring_student_breakdown, combination_timeslot_assgned_students_lookup, timeslot_in_minutes, sort_timeslots, label_combo_by_timeslots, combo_dicts_for_display, define_week, define_quarter, find_date_by_week, fix_timeslots_by_week, convert_to_pyth_time, convert_list_to_pyth_time, find_week_in_quarter, any_timeslot_conflicts, quarter_table, multiple_section_timeslots_by_week, full_quarter_schedule, timeslots_for_quarter_by_date, conflicts_full_quarter, conflicts_integrated, get_chosen_combos, seminars_by_week, active_week_combos, find_first_active_week, basic_student_data, full_spreadsheet, get_time_headers, mine_timeslot, mine_timeslots, mine_student_availability, get_earliest_start, get_latest_end, get_timeslot_column, timeslot_durations, add_student, add_students, add_timeslot, add_timeslots, student_avail_starts, save_students, save_timeslots, add_timeslots_to_students, provisional_timetable, timeslot_pk_lookup_dict, all_combos_for_quarter, combination_lookup, check_csv, destring_int_keys, write_csv_text, find_thanksgiving, fall_first_monday, winter_first_monday, spring_first_monday, summer_first_monday, set_first_monday, json_time, json_time_dict, json_week_by_week_cal, combo_count_by_section, sections_meeting_same_week, saved_timeslot_combinations_lookup, combo_count_overlapping_weeks, natural_sort, sorted_section_choices
+from .utils import get_students_from_time, get_availabilities, make_class_list, make_combinations, pull_students, will_combo_together, convert_to_timeslot_object, convert_timeslot_list_to_objects, convert_timeslots_in_dict_to_objects, in_minutes, in_hours_and_minutes, timetable_range, timetable, find_rowspans, determine_timeslot_duration, timetable_with_rowspans, write_out_n, availabilities_by_timeslot, student_availability, any_required_timeslots, least_available_students, reverse_keys_and_vals, recommended_pairings, timeslot_choice_field, add_blank_field, working_combos_django, working_combos_pk, combo_lookup_dict_pk, student_cap_by_timeslot, make_selected_timeslots_list, make_selected_timeslots_list_dj, get_just_selected_timeslots, selected_timeslots_for_json, students_for_json, students_cnet_to_pk, selected_avail_dict, convert_to_student_object, convert_avail_dict, student_choice_field, student_choices_by_timeslot, tally_student_availability, make_pronoun_choices, make_student_combinations, student_combos_for_selected_timeslots, sort_timeslots_by_length, no_overlap, gut_options, gut_options_final, gut_for_all_times, working_student_combos, make_assignments, convert_assgs_pk, checkbox_count, display_students, matches_existing_combo, unique_timeslot_combo, unique_timeslot_combo2, stringify_assigned_student_numbers, destring_student_breakdown, combination_timeslot_assgned_students_lookup, timeslot_in_minutes, sort_timeslots, label_combo_by_timeslots, combo_dicts_for_display, define_week, define_quarter, find_date_by_week, fix_timeslots_by_week, convert_to_pyth_time, convert_list_to_pyth_time, find_week_in_quarter, any_timeslot_conflicts, quarter_table, multiple_section_timeslots_by_week, full_quarter_schedule, timeslots_for_quarter_by_date, conflicts_full_quarter, conflicts_integrated, get_chosen_combos, seminars_by_week, active_week_combos, find_first_active_week, basic_student_data, full_spreadsheet, get_time_headers, mine_timeslot, mine_timeslots, mine_student_availability, get_earliest_start, get_latest_end, get_timeslot_column, timeslot_durations, add_student, add_students, add_timeslot, add_timeslots, student_avail_starts, save_students, save_timeslots, add_timeslots_to_students, provisional_timetable, timeslot_pk_lookup_dict, all_combos_for_quarter, combination_lookup, check_csv, destring_int_keys, write_csv_text, find_thanksgiving, fall_first_monday, winter_first_monday, spring_first_monday, summer_first_monday, set_first_monday, json_time, json_time_dict, json_week_by_week_cal, combo_count_by_section, sections_meeting_same_week, saved_timeslot_combinations_lookup, combo_count_overlapping_weeks, timeslot_ranges_lookup, natural_sort, sorted_section_choices
 from .forms import SelectTimeslots, InitialSetup, HandpickByTimeslot, HandpickStudents, RefineAssignments, ChooseSection, SaveTimeslotCombo, CalendarViews, JumpWeek, ChooseQuarter, ImportSectionCSV, ConfirmCSVImport, CreateSection, ShowSavedCombos
 from datetime import time, date, datetime, timedelta
 
@@ -307,7 +307,7 @@ def timeslots(request):
     lookup_dict = will_combo_together(timeslots_pyth, working_combos)
     working_timeslots = list(lookup_dict.keys())
     working_timeslots_dj = convert_timeslot_list_to_objects(working_timeslots, timeslots_dj)
-    column_times = timetable_range(working_timeslots)
+    column_times = timetable_range(working_timeslots, timeslots_dj)
     basic_timetable = timetable(column_times, working_timeslots, timeslots_dj)
     rowspans = find_rowspans(working_timeslots_dj)
     n_written_out = write_out_n(n)
@@ -332,6 +332,7 @@ def timeslots(request):
     pk_combo_lookup = combo_lookup_dict_pk(pk_lookup_dict, working_combos_by_pk)
     json_dump = dumps(pk_lookup_dict)
     json_dump2 = dumps(pk_combo_lookup)
+    timeslot_ranges = dumps(timeslot_ranges_lookup(working_timeslots_dj))
 
     # other section filters
     same_week_secs = sections_meeting_same_week(sec_obj)
@@ -380,8 +381,54 @@ def timeslots(request):
         'saved_combo_count': saved_combo_count,
         'show_combos_form': show_combos_form,
         'combination_string': combination_string,
+        'timeslot_ranges': timeslot_ranges,
     }
     return HttpResponse(template.render(context, request))
+
+
+@ensure_csrf_cookie
+def assign_students(request):
+    passed_section = request.session.get('section')
+    passed_min_students = request.session.get('min_students')
+    passed_n_seminars = request.session.get('n_seminars')
+    min_n = passed_min_students
+    sec_name = passed_section
+    n_timeslots = passed_n_seminars
+    m = 1
+    form_data = []
+    while m <= n_timeslots:
+        selection = request.session.get('slot' + str(m))
+        n_assigned = request.session.get('n_students' + str(m))
+        tup = (selection, n_assigned)
+        form_data.append(tup)
+        m = m + 1
+
+   # check to display save combo box
+
+    timeslot_list = make_selected_timeslots_list(form_data)
+    timeslot_list.sort()
+    timeslot_list_dj = make_selected_timeslots_list_dj(form_data)
+    just_selected_timeslots = get_just_selected_timeslots(timeslot_list_dj)
+    
+    section = Section.objects.get(name=passed_section)
+    existing_combos = Combination.objects.filter(section=section)
+    unique_combo = unique_timeslot_combo2(existing_combos, just_selected_timeslots)
+
+    # new data structures to pass to react
+    sec_pk = Section.objects.get(name=sec_name).pk
+    student_list = make_student_list_react(sec_pk, just_selected_timeslots)
+    seminar_list = make_seminar_list_react(form_data, timeslot_list_dj)
+
+    template = loader.get_template('slotter/assign_students.html')
+    context = {
+        'unique_combo': unique_combo,
+        'student_list': student_list,
+        'seminar_list': seminar_list,
+        'timeslot_list': timeslot_list,
+    }
+    return HttpResponse(template.render(context, request))
+
+"""
 
 @ensure_csrf_cookie
 def assign_students(request):
@@ -477,6 +524,44 @@ def assign_students(request):
         'handpick_selections': handpick_selections,
     }
     return HttpResponse(template.render(context, request))
+
+"""
+
+def make_student_list_react(sec_pk, selected_timeslots):
+    students_for_json = []
+    students = Student.objects.filter(section=sec_pk)
+    for student in students:
+        student_entry = {}
+        student_entry['id'] = student.pk
+        student_entry['first_name'] = student.first_name
+        student_entry['last_name'] = student.last_name
+        student_entry['pronouns'] = [student.pronouns]
+        times = []
+        for t in selected_timeslots:
+            if t in student.timeslots.all():
+                times.append(t.pk)
+        student_entry['times'] = times
+        student_entry['selection'] = None
+        student_entry['disabled'] = []
+        if len(times) > 1:
+            student_entry['only'] = False
+        else:
+            student_entry['only'] = True
+        students_for_json.append(student_entry)
+    return students_for_json
+
+def make_seminar_list_react(times, ordered_list):
+    weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    seminars = []
+    for time in ordered_list:
+        time_entry = {}
+        time_entry['id'] = time[0].pk
+        time_entry['day'] = weekdays[time[0].weekday]
+        time_entry['start_time'] = time[0].start_time.strftime("%-I:%M %p").lower()
+        time_entry['slots'] = time[1]
+        time_entry['remaining'] = time[1]
+        seminars.append(time_entry)
+    return seminars
 
 def save_timeslots_combo(request):
     passed_section = request.session.get('section')

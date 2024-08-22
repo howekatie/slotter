@@ -309,11 +309,14 @@ def in_hours_and_minutes(time):
     """
     return divmod(time, 60)
 
-def timetable_range(working_timeslots):
+def timetable_range(working_timeslots, timeslots_dj):
     """
+
     Takes the list of working timeslots from will_combo_together and strips away the day tuple (t[0]). Determines what the earliest and latest times are from among these. Returns a list of the range of times starting from the earliest and ending in the latest in 30 min increments. This list of times is what determines what the left-most column in the HTML scheduling table will look like.
 
-    # in reviewing this, it seems like this works on the assumption that seminars are only an hour long, but that might not always be the case, so it seems to me that this needs to be updated using Django objects intead of pyth times
+    Updated 2024/08/16 - instead of just finding the latest timeslot and tacking on 30 min to determine the end-range of the timetable, now this gets determined by finding a corresponding Timeslot object, grabbing its end time, and treating *that* as the last timeslot. So, now, the timetable range will always include a 30 min buffer at the end (given how the original while loop works).
+
+    Additional update, same day - the final "list" is now actually a zipped cominbation of two lists now -- so each item is a tuple of the form (pyth_time, minute_time). The reason for this is that I wanted to be able to add ids to each <td> in the time column, and this seemed like the best naming convention for time ids and the best way to integrate this into the existing HTML template, given how the table data gets unpacked there. The functions timetable and timetable_with_rowspans have been updated accordingly.
     """
     just_times = []
     for t in working_timeslots:
@@ -321,7 +324,15 @@ def timetable_range(working_timeslots):
     just_times.sort()
     earliest = in_minutes(just_times[0])
     last = len(just_times) - 1
-    latest = in_minutes(just_times[last])
+    # updated method for finding end of range
+    for t in working_timeslots:
+        if t[1] == just_times[last]:
+            latest_slot = t
+            latest_slot = convert_to_timeslot_object(latest_slot, timeslots_dj)
+            latest_start = in_minutes(latest_slot.start_time)
+            latest_end = in_minutes(latest_slot.end_time)
+    latest = latest_end
+    # update ends here
     times_in_minutes= [earliest,]
     n = earliest
     while n <= latest:
@@ -335,7 +346,8 @@ def timetable_range(working_timeslots):
     for t in times_in_hours:
         new_time = time(t[0], t[1])
         table_times.append(new_time)
-    return table_times
+    table_times_plus_mins = zip(table_times, times_in_minutes)
+    return table_times_plus_mins
 
 def timetable(column_times, timeslots, timeslots_dj):
     """
@@ -346,7 +358,7 @@ def timetable(column_times, timeslots, timeslots_dj):
     mon_to_fri = []
     for t in column_times:
         for day in weekdays:
-            slot = (day, t)
+            slot = (day, t[0])
             if slot in timeslots:
                 mon_to_fri.append(convert_to_timeslot_object(slot, timeslots_dj))
             else:
@@ -397,12 +409,12 @@ def timetable_with_rowspans(basic_timetable, rowspans):
     """
     for x in rowspans:
         for t in basic_timetable:
-            if x[1] < t and x[2] > t:
+            if x[1] < t[0] and x[2] > t[0]:
                 day = x[0]
                 basic_timetable[t][day] = "continuation"
     new_timetable = {}
     for t in basic_timetable:
-        new_timetable[t.strftime("%-I:%M %p")] = basic_timetable[t]
+        new_timetable[(t[0].strftime("%-I:%M %p"), t[1])] = basic_timetable[t]
     return new_timetable
 
 def write_out_n(n):
@@ -541,6 +553,23 @@ def combo_count_overlapping_weeks(same_week_secs):
     for sec in same_week_secs:
         section_dict[sec.pk] = sec.combination_set.all().count()
     return section_dict
+
+def timeslot_ranges_lookup(working_timeslots_dj):
+    lookup_list = []
+    for t in working_timeslots_dj:
+        time_range_dict = {}
+        time_range_dict['timeslot'] = t.pk
+        start = in_minutes(t.start_time)
+        end = in_minutes(t.end_time)
+        range_list = []
+        n = start
+        while n < end:
+            range_list.append(n)
+            n = n + 30
+        time_range_dict['range'] = range_list
+        lookup_list.append(time_range_dict)
+    return lookup_list
+
 
 # ASSIGNING STUDENTS
 
@@ -1056,6 +1085,7 @@ def matches_existing_combo(combo, timeslots):
 def unique_timeslot_combo(combos, timeslots):
     """
     Uses matches_existing_combo to check the selected timeslots against all existing combos -- if the selected timeslots are unique, returns true.
+    *** will no longer be in use once the original assign_students view gets replaced with the React version
     """
     verdicts = []
     for combo in combos:
@@ -1065,6 +1095,21 @@ def unique_timeslot_combo(combos, timeslots):
         return False
     else:
         return True
+
+def unique_timeslot_combo2(combos, timeslots):
+    """
+    Uses matches_existing_combo to check the selected timeslots against all existing combos -- if the selected timeslots are unique (not a part of an existing set of timeslots), returns a dict with the value True. (Returns a dict so that Javascript can do a proper JSON.parse down the line.)
+    """
+    combo_status = {}
+    verdicts = []
+    for combo in combos:
+        verdict = matches_existing_combo(combo, timeslots)
+        verdicts.append(verdict)
+    if True in verdicts:
+        combo_status["value"] = False
+    else:
+        combo_status["value"] = True
+    return combo_status
 
 def stringify_assigned_student_numbers(tuple_list):
     """
@@ -1228,7 +1273,7 @@ def check_csv(raw_data):
                     error_list.append((col, row))
             # entries for first and last names
             elif row > 1 and col < 4:
-                if all(char.isalpha() or char.isspace() or char == '-' for char in cell) == False or len(cell) > 30:
+                if all(char.isalpha() or char.isspace() or char == '-' or char == '’' for char in cell) == False or len(cell) > 30:
                     error_list.append((col, row))
             # entries for availability
             elif row > 1 and col > 4:
@@ -1397,8 +1442,8 @@ def basic_student_data(spreadsheet):
     for line in spreadsheet:
         if line != 0:
             student_dict['cnet'] = spreadsheet[line][0]
-            student_dict['last_name'] = spreadsheet[line][1]
-            student_dict['first_name'] = spreadsheet[line][2]
+            student_dict['first_name'] = spreadsheet[line][1]
+            student_dict['last_name'] = spreadsheet[line][2]
             student_dict['pronouns'] = convert_pronoun_response(spreadsheet[line][3])
             student_data.append(student_dict)
             student_dict = {}

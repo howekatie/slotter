@@ -4,6 +4,8 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 from . import views
 
+from django.views.generic.base import TemplateView
+
 urlpatterns = [
     path('', views.index, name='index'),
     path('create/', views.create_section, name='create_section'),

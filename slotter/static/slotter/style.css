@@ -66,9 +66,10 @@ a:active {
 /* Navigation and Header */
 
 #logo {
-	padding-right: 40px;
+	margin-right: 40px;
 	float: left;
 	width: 150px;
+	padding: 0;
 }
 
 #header {
